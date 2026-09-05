@@ -1,0 +1,49 @@
+{
+    "name": "VIVE.OpenXR",
+    "rootNamespace": "",
+    "references": [
+        "Unity.XR.OpenXR",
+        "Unity.InputSystem",
+        "Unity.XR.Hands"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor",
+        "WSA",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.xr.hands",
+            "expression": "1.3.0",
+            "define": "UNITY_XR_HANDS"
+        },
+        {
+            "name": "com.unity.xr.hands",
+            "expression": "1.5.0",
+            "define": "UNITY_XR_HANDS_1_5_0"
+        },
+        {
+            "name": "com.unity.xr.interaction.toolkit",
+            "expression": "0.9.4-preview",
+            "define": "XR_INTERACTION_TOOLKIT"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.6.0",
+            "define": "UNITY_XR_OPENXR_1_6_0"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.9.1",
+            "define": "UNITY_XR_OPENXR_1_9_1"
+        }
+    ],
+    "noEngineReferences": false
+}

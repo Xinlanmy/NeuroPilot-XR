@@ -104,3 +104,24 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Local backups, development tools and signing credentials
+/Backups/
+/.codex/
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.pem
+
+# Generated Python/tool caches inside embedded editor packages
+__pycache__/
+*.pyc
+.pytest_cache/
