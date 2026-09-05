@@ -8,7 +8,7 @@ namespace NeuroPilotXR.Navigation
 {
     public sealed class SceneTransitionManager : MonoBehaviour
     {
-        [SerializeField] private string trainingSceneName = "SpaceTraining";
+        [SerializeField] private string trainingSceneName = "TrainingRoom";
         [SerializeField] private CanvasGroup difficultyContent;
         [SerializeField] private TMP_Text preparingText;
         [SerializeField] private CanvasGroup screenFade;
@@ -25,7 +25,8 @@ namespace NeuroPilotXR.Navigation
             CanvasGroup fade,
             Canvas transitionCanvas,
             Button trigger,
-            VivePassthroughManager passthrough)
+            VivePassthroughManager passthrough,
+            string targetSceneName = "TrainingRoom")
         {
             difficultyContent = content;
             preparingText = status;
@@ -33,6 +34,7 @@ namespace NeuroPilotXR.Navigation
             fadeCanvas = transitionCanvas;
             startButton = trigger;
             passthroughManager = passthrough;
+            trainingSceneName = targetSceneName;
         }
 
         private void Awake()
@@ -46,6 +48,11 @@ namespace NeuroPilotXR.Navigation
 
         public void BeginTraining()
         {
+            if (!Application.CanStreamedLevelBeLoaded(trainingSceneName))
+            {
+                Debug.LogError("[NeuroPilot] Training scene is not in Build Settings: " + trainingSceneName);
+                return;
+            }
             if (!transitioning)
                 StartCoroutine(Transition());
         }

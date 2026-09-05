@@ -9,8 +9,8 @@ EditorBuildSettings:
     path: Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity
     guid: ca474b2b88f418b4099dd10aa107c58b
   - enabled: 1
-    path: Assets/NeuroPilot/Scenes/SpaceTraining.unity
-    guid: d2c925f3cbbb13b4aa664a4e678cf1a1
+    path: Assets/NeuroPilot/TrainingRoom/Scenes/TrainingRoom.unity
+    guid: 1dca5494c32e2724fa1b180579d85a67
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 4451d5afd259bf54ca0c83eb4e3adc1d, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 5ce2ca58e3e701241b77a77b8789ff53, type: 2}

@@ -151,7 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38aba95031418cf47a17e385d2a3b391, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  trainingSceneName: SpaceTraining
+  trainingSceneName: TrainingRoom
   difficultyContent: {fileID: 1673035909}
   preparingText: {fileID: 505136634}
   screenFade: {fileID: 373303926}

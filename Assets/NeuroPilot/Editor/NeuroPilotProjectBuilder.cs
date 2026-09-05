@@ -62,7 +62,8 @@ namespace NeuroPilotXR.Editor
             topNotchSprite = CreateTopNotchSprite();
             CreateMaterials();
             BuildNavigationScene();
-            BuildTrainingScene();
+            if (!File.Exists(TrainingRoomIntegration.ScenePath))
+                BuildTrainingScene();
             ConfigureBuildSettings();
             ConfigureOpenXR();
             AssetDatabase.SaveAssets();
@@ -491,7 +492,8 @@ namespace NeuroPilotXR.Editor
             SceneTransitionManager transition = transitionRoot.AddComponent<SceneTransitionManager>();
             Canvas fadeCanvas;
             CanvasGroup fadeGroup = CreateFadeCanvas(transitionRoot.transform, camera, out fadeCanvas);
-            transition.Configure(difficultyContent, preparing, fadeGroup, fadeCanvas, startButton, passthrough);
+            transition.Configure(difficultyContent, preparing, fadeGroup, fadeCanvas, startButton, passthrough,
+                File.Exists(TrainingRoomIntegration.ScenePath) ? "TrainingRoom" : "SpaceTraining");
             UnityEventTools.AddPersistentListener(startButton.onClick, transition.BeginTraining);
 
             difficulty.gameObject.SetActive(false);
@@ -879,7 +881,8 @@ namespace NeuroPilotXR.Editor
             EditorBuildSettings.scenes = new[]
             {
                 new EditorBuildSettingsScene(NavigationScenePath, true),
-                new EditorBuildSettingsScene(TrainingScenePath, true)
+                new EditorBuildSettingsScene(File.Exists(TrainingRoomIntegration.ScenePath)
+                    ? TrainingRoomIntegration.ScenePath : TrainingScenePath, true)
             };
         }
 
