@@ -18,6 +18,11 @@ public class TrainingHUD : MonoBehaviour
     public GameObject resultPanel;
     public Text resultText;
     public Text modeText;
+    public Text accuracyText;
+    public Text countdownText;
+    public GameObject statsRoot;
+    public GameObject footerRoot;
+    public GameObject countdownRoot;
 
     private float _roundDuration;
 
@@ -28,13 +33,18 @@ public class TrainingHUD : MonoBehaviour
         if (resultPanel != null) resultPanel.SetActive(false);
         if (hintText != null) hintText.text = "";
         UpdateTimeText(duration);
-        if (statText != null) statText.text = "命中 0　漏失 0";
+        if (statText != null) statText.text = "0";
+        if (accuracyText != null) accuracyText.text = "—";
+        SetCountdown(Mathf.CeilToInt(session != null && session.config != null ? session.config.readyCountdown : 3));
+        SetHint("面向前方靶区  ·  准备开始");
         if (modeText != null)
         {
             var difficulty = NeuroPilotXR.Navigation.TrainingSession.SelectedDifficulty;
             string label = difficulty == NeuroPilotXR.Navigation.DifficultyLevel.Beginner ? "轻度" :
                 difficulty == NeuroPilotXR.Navigation.DifficultyLevel.Advanced ? "挑战" : "标准";
-            modeText.text = "TrainingRoom v1.1.1  ·  训练强度：" + label + "  ·  扳机 / 空格：模拟命中";
+            modeText.text = "TrainingRoom v" + Application.version + "  ·  " + label + "  ·  " +
+                (session != null && session.EegPort != null && session.EegPort.eegInputEnabled
+                    ? "EEG 接口模式（需适配器）" : "扳机 / 空格模拟  ·  EEG 未连接");
         }
     }
 
@@ -45,34 +55,54 @@ public class TrainingHUD : MonoBehaviour
 
     public void OnHit()
     {
-        if (statText != null && session != null)
-            statText.text = $"命中 {session.HitCount}　漏失 {session.MissCount}";
+        UpdateStats();
+        SetHint("命中  ·  准备下一个目标");
     }
 
     public void OnMiss()
     {
-        if (statText != null && session != null)
-            statText.text = $"命中 {session.HitCount}　漏失 {session.MissCount}";
+        UpdateStats();
+        SetHint("本次超时  ·  继续下一个目标");
     }
+
+    private void UpdateStats()
+    {
+        if (session == null) return;
+        if (statText != null) statText.text = session.HitCount.ToString();
+        int total = session.HitCount + session.MissCount;
+        if (accuracyText != null) accuracyText.text = total == 0 ? "—" : (100f * session.HitCount / total).ToString("F0") + "%";
+    }
+
+    public void SetCountdown(int seconds)
+    {
+        if (countdownRoot != null) countdownRoot.SetActive(true);
+        if (countdownText != null) countdownText.text = seconds > 0 ? seconds.ToString() : "开始";
+    }
+
+    public void HideCountdown() { if (countdownRoot != null) countdownRoot.SetActive(false); }
 
     public void ShowResult(int hit, int miss, float rate, float avgReaction)
     {
         SetSessionLabelsVisible(false);
+        HideCountdown();
         if (resultPanel != null) resultPanel.SetActive(true);
         if (resultText != null)
         {
             resultText.text =
-                $"—— 本轮结束 ——\n\n" +
-                $"命中　{hit} 次\n" +
-                $"漏失　{miss} 次\n" +
-                $"命中率　{rate:F1}%\n" +
-                $"平均反应时　{avgReaction:F2}s\n\n" +
-                $"按侧握键 / R 再来一轮";
+                "<size=26><color=#8DA9BA>NEUROPILOT  /  SESSION COMPLETE</color></size>\n\n" +
+                "<size=64>本轮结束</size>\n\n" +
+                $"命中  <color=#40D6ED>{hit}</color>    漏失  {miss}\n" +
+                $"命中率  {(hit + miss > 0 ? rate.ToString("F1") + "%" : "—")}\n" +
+                $"平均反应时  {(hit > 0 ? avgReaction.ToString("F2") + " 秒" : "—")}\n\n" +
+                "<size=30><color=#8DA9BA>按侧握键 / R  再来一轮</color></size>";
         }
     }
 
     private void SetSessionLabelsVisible(bool visible)
     {
+        if (statsRoot != null) statsRoot.SetActive(visible);
+        if (footerRoot != null) footerRoot.SetActive(visible);
+        if (accuracyText != null) accuracyText.gameObject.SetActive(visible);
         if (timeText != null) timeText.gameObject.SetActive(visible);
         if (statText != null) statText.gameObject.SetActive(visible);
         if (hintText != null) hintText.gameObject.SetActive(visible);

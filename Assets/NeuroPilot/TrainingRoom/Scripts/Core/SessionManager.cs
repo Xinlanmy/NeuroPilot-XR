@@ -16,6 +16,7 @@ public class SessionManager : MonoBehaviour
     public Spawner spawner;
     public TrainingHUD hud;
     public IHitSource hitSource;
+    public TrainingEegPort EegPort { get; private set; }
 
     public State CurrentState { get; private set; }
     public float RoundRemain { get; private set; }
@@ -43,6 +44,7 @@ public class SessionManager : MonoBehaviour
 
     void Start()
     {
+        EegPort = GetComponent<TrainingEegPort>();
         if (config == null) config = ScriptableObject.CreateInstance<SessionConfig>();
         // 默认键盘模拟源（若场景没注入）
         if (hitSource == null)
@@ -72,18 +74,22 @@ public class SessionManager : MonoBehaviour
         {
             case State.Ready:
                 _stateTimer -= Time.deltaTime;
-                if (hud != null) hud.SetHint($"准备… {Mathf.Max(0, Mathf.CeilToInt(_stateTimer))}");
+                if (hud != null) hud.SetCountdown(Mathf.Max(0, Mathf.CeilToInt(_stateTimer)));
                 if (_stateTimer <= 0f) ChangeState(State.Spawn);
                 break;
 
             case State.Spawn:
+                if (!spawner.TrySpawnNext())
+                {
+                    if (hud != null) hud.SetHint("靶区配置不可用，请检查训练区域设置");
+                    break;
+                }
                 _ballSpawnTime = Time.time;
-                spawner.SpawnNext();
                 ChangeState(State.AwaitHit);
                 break;
 
             case State.AwaitHit:
-                if (hitSource.HitPressed())
+                if (EegPort != null && EegPort.eegInputEnabled ? EegPort.ConsumeHit() : hitSource.HitPressed())
                 {
                     _totalReaction += Time.time - _ballSpawnTime;
                     _reactionSamples++;
@@ -120,6 +126,7 @@ public class SessionManager : MonoBehaviour
 
     void ChangeState(State s)
     {
+        if (CurrentState == State.AwaitHit && s != State.AwaitHit && EegPort != null) EegPort.EndStimulus();
         CurrentState = s;
         _stateTimer = 0f;
         switch (s)
@@ -136,7 +143,8 @@ public class SessionManager : MonoBehaviour
             case State.AwaitHit:
                 _stateTimer = 0f;
                 if (hitSource != null) hitSource.Reset();
-                if (hud != null) hud.SetHint("盯住闪烁的球…");
+                if (EegPort != null) EegPort.BeginStimulus(config.flickerHz);
+                if (hud != null) { hud.HideCountdown(); hud.SetHint("注视前方目标  ·  等待命中确认"); }
                 break;
 
             case State.HitFeedback:
@@ -176,10 +184,19 @@ public class SessionManager : MonoBehaviour
     /// <summary>供 HUD/外部按钮 重新开始</summary>
     public void RestartRound()
     {
+        if (EegPort != null) EegPort.EndStimulus();
         if (spawner != null) spawner.DespawnCurrent();
         HitCount = 0; MissCount = 0;
         _totalReaction = 0f; _reactionSamples = 0;
         RoundRemain = config.roundDuration;
         ChangeState(State.Ready);
+    }
+
+    private void OnDisable()
+    {
+        if (EegPort != null) EegPort.EndStimulus();
+        if (spawner != null) spawner.DespawnCurrent();
+        if (CurrentState != State.Ready && CurrentState != State.GameOver)
+            ChangeState(State.Spawn);
     }
 }

@@ -22,7 +22,8 @@ namespace NeuroPilotXR.Editor
         public const string NavigationPath = "Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity";
         private const string Root = "Assets/NeuroPilot/TrainingRoom";
         private const string RigPath = "Assets/Samples/XR Interaction Toolkit/2.5.4/Starter Assets/Prefabs/XR Interaction Setup.prefab";
-        private const string ApkPath = "Builds/Android/NeuroPilotXR_1.1.1_TrainingRoom.apk";
+        public const string Version = "1.1.2";
+        private const string ApkPath = "Builds/Android/NeuroPilotXR_" + Version + "_TrainingRoom.apk";
 
         [MenuItem("NeuroPilot/Training Room/Integrate Imported Scene")]
         public static void Prepare()
@@ -93,6 +94,7 @@ namespace NeuroPilotXR.Editor
             var hud = UnityEngine.Object.FindObjectOfType<TrainingHUD>();
             if (session == null || spawner == null || hud == null) throw new InvalidOperationException("Imported training dependencies missing.");
             spawner.viewCamera = camera;
+            if (session.GetComponent<TrainingEegPort>() == null) session.gameObject.AddComponent<TrainingEegPort>();
             var entry = session.GetComponent<TrainingRoomEntry>();
             if (entry == null) entry = session.gameObject.AddComponent<TrainingRoomEntry>();
             entry.origin = rig; entry.session = session; entry.hud = hud.transform;
@@ -116,6 +118,7 @@ namespace NeuroPilotXR.Editor
             var result = (RectTransform)hud.resultPanel.transform;
             result.anchoredPosition = Vector2.zero; result.sizeDelta = new Vector2(1100f, 700f);
             Format(hud.resultText, font, Vector2.zero, new Vector2(1040f, 650f), 48, Color.white);
+            TrainingRoomPresentation.Prepare(hud, rig);
             ValidateScene(scene);
             EditorSceneManager.SaveScene(scene);
 
@@ -125,17 +128,17 @@ namespace NeuroPilotXR.Editor
             serialized.FindProperty("trainingSceneName").stringValue = "TrainingRoom";
             serialized.ApplyModifiedPropertiesWithoutUndo();
             var brand = UnityEngine.Object.FindObjectsOfType<TMP_Text>(true).FirstOrDefault(text => text.name == "BrandText");
-            if (brand != null) brand.text = "NEUROPILOT XR  ·  v1.1.1 TRAININGROOM";
+            if (brand != null) brand.text = "NEUROPILOT XR  ·  v" + Version + " TRAININGROOM";
             EditorSceneManager.SaveScene(scene);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(NavigationPath, true), new EditorBuildSettingsScene(ScenePath, true) };
-            PlayerSettings.productName = "NeuroPilot XR 1.1.1";
-            PlayerSettings.bundleVersion = "1.1.1";
-            PlayerSettings.Android.bundleVersionCode = 4;
+            PlayerSettings.productName = "NeuroPilot XR " + Version;
+            PlayerSettings.bundleVersion = Version;
+            PlayerSettings.Android.bundleVersionCode = 5;
             AssetDatabase.SaveAssets();
             // Remove only obsolete adapter-generated helper materials; prefab shader references are restored above.
             AssetDatabase.DeleteAsset(Root + "/Materials/TrainingRoom_TunnelingVignette.mat");
             AssetDatabase.DeleteAsset(Root + "/Materials/TrainingRoom_Teleport_Interactor.mat");
-            Debug.Log("[TrainingRoomIntegration] Prepared 1.1.1 navigation -> TrainingRoom; source stimulus parameters preserved.");
+            Debug.Log("[TrainingRoomIntegration] Prepared " + Version + " navigation -> TrainingRoom; source stimulus parameters preserved.");
         }
 
         private static void Format(Text text, Font font, Vector2 position, Vector2 size, int fontSize, Color color)

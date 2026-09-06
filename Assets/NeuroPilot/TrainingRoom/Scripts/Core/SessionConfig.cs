@@ -23,9 +23,9 @@ public class SessionConfig : ScriptableObject
     [Tooltip("漏失反馈(变灰淡化)时长(秒)")] public float missFeedbackTime = 0.6f;
     [Tooltip("消失后空档(秒)")] public float cooldownTime = 1f;
 
-    [Header("球出现区域(相对相机视野)")]
-    [Tooltip("球距相机前向深度范围(米)，保证球只在正前方视野内出现")]
-    public Vector2 spawnZRange = new Vector2(1.5f, 5.5f);
+    [Header("球出现区域(固定入场前方，不跟随转头)")]
+    [Tooltip("相对入场位置的前方深度范围(米)，转头不会移动靶区")]
+    public Vector2 spawnZRange = new Vector2(3.5f, 8.5f);
     [Tooltip("水平安全边界(米)，视野锥约束后的额外上限，防球贴墙")]
     public Vector2 spawnXRange = new Vector2(-3f, 3f);
     [Tooltip("垂直高度范围(米)")]

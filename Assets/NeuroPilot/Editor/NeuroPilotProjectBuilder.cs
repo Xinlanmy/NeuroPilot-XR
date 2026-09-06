@@ -49,6 +49,8 @@ namespace NeuroPilotXR.Editor
         [MenuItem("NeuroPilot/Build Complete MVP")]
         public static void BuildAll()
         {
+            if (!File.Exists(TrainingRoomIntegration.ScenePath))
+                throw new InvalidOperationException("White TrainingRoom is required. Restore it from source control; SpaceTraining is retired.");
             EnsureFolder(Root);
             EnsureFolder(SceneFolder);
             EnsureFolder(ArtFolder);
@@ -62,12 +64,11 @@ namespace NeuroPilotXR.Editor
             topNotchSprite = CreateTopNotchSprite();
             CreateMaterials();
             BuildNavigationScene();
-            if (!File.Exists(TrainingRoomIntegration.ScenePath))
-                BuildTrainingScene();
             ConfigureBuildSettings();
             ConfigureOpenXR();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            TrainingRoomIntegration.Prepare();
             EditorSceneManager.OpenScene(NavigationScenePath, OpenSceneMode.Single);
             Debug.Log("[NeuroPilot] Complete MVP created successfully.");
         }
@@ -493,7 +494,7 @@ namespace NeuroPilotXR.Editor
             Canvas fadeCanvas;
             CanvasGroup fadeGroup = CreateFadeCanvas(transitionRoot.transform, camera, out fadeCanvas);
             transition.Configure(difficultyContent, preparing, fadeGroup, fadeCanvas, startButton, passthrough,
-                File.Exists(TrainingRoomIntegration.ScenePath) ? "TrainingRoom" : "SpaceTraining");
+                "TrainingRoom");
             UnityEventTools.AddPersistentListener(startButton.onClick, transition.BeginTraining);
 
             difficulty.gameObject.SetActive(false);
@@ -881,8 +882,7 @@ namespace NeuroPilotXR.Editor
             EditorBuildSettings.scenes = new[]
             {
                 new EditorBuildSettingsScene(NavigationScenePath, true),
-                new EditorBuildSettingsScene(File.Exists(TrainingRoomIntegration.ScenePath)
-                    ? TrainingRoomIntegration.ScenePath : TrainingScenePath, true)
+                new EditorBuildSettingsScene(TrainingRoomIntegration.ScenePath, true)
             };
         }
 

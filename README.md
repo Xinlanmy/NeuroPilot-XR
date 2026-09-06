@@ -1,6 +1,6 @@
 # NeuroPilot-XR
 
-基于 Unity 开发的注意力训练场景。目标 VR 设备为 VIVE Focus Vision，脑机设备为博瑞康；1.1 已接入用户提供的 TrainingRoom 训练房间，真实脑机数据尚未接入。
+基于 Unity 开发的注意力训练场景。目标 VR 设备为 VIVE Focus Vision，脑机设备为博瑞康。当前版本 **1.1.2**，以后以白色 TrainingRoom 为训练主线；真实脑机数据尚未接入。
 
 ## 当前功能
 
@@ -24,18 +24,20 @@
 
 ## 下载与文档
 
+- [1.1.2 正前方出球与 EEG 接口预留版](https://github.com/Xinlanmy/NeuroPilot-XR/releases/tag/v1.1.2)
+- [1.1.2 队友更新教程、接口约定与验收](1.1.2白色房间更新与脑电接口.md)
 - [1.1.1 TrainingRoom 修复安装包](https://github.com/Xinlanmy/NeuroPilot-XR/releases/tag/v1.1.1)
 - [1.1 场景接入与安装教程](1.1场景接入与验收.md)
 - [新手操作教程](新手操作教程.md)
 - [拖动与启动定位修复验收](拖动与启动定位修复验收.md)
 
-APK 包名为 `com.neuropilot.xr`。1.1.1 是开发测试构建，versionCode 为 `4`；可覆盖安装之前的同签名测试版本。
+APK 包名为 `com.neuropilot.xr`。1.1.2 是开发测试构建，versionCode 为 `5`；可覆盖安装之前的同签名测试版本。
 
 ## 目录
 
 | 目录 | 内容 |
 | --- | --- |
-| `Assets/NeuroPilot/Scenes` | 入口导航与 `SpaceTraining` 占位场景 |
+| `Assets/NeuroPilot/Scenes` | 入口导航；旧 SpaceTraining 历史资产已停用、不再回退 |
 | `Assets/NeuroPilot/TrainingRoom` | 从用户提供的项目导入并适配的训练场景、配置、脚本和 URP 材质 |
 | `Assets/NeuroPilot/Scripts` | 窗口拖动、启动定位、页面切换、难度选择与 MR 转场 |
 | `Assets/NeuroPilot/Editor` | 场景生成/修复工具与编辑器交互回归工具 |
@@ -54,7 +56,7 @@ Unity 缓存、日志、本地备份和构建产物不进入源码历史。最�
 
 1.1.1 已通过编辑器端到端验证：入口按钮转场、唯一摄像机/XR Origin、强度传递、出球、键盘模拟命中、漏失、结算与重开。为避免与旧 APK 混淆，头显应用名显示为 `NeuroPilot XR 1.1.1`，入口显示 `v1.1.1 TRAININGROOM`。训练/结算预览及验收步骤见 [1.1 场景接入与验收](1.1场景接入与验收.md)。
 
-1.1 的默认训练场景为 `Assets/NeuroPilot/TrainingRoom/Scenes/TrainingRoom.unity`。旧 `SpaceTraining` 仅保留作历史占位，不参与当前构建。训练的命中输入仍为手柄/键盘模拟，`EegHitSource` 只是接口占位；未接入真实 EEG，也未验证头显实际闪烁频率。
+1.1.2 的训练场景为 `Assets/NeuroPilot/TrainingRoom/Scenes/TrainingRoom.unity`。旧 `SpaceTraining` 仅作历史记录，不参与构建，工具也不再回退到它。新球在入场确定的固定前方靶区逐个出现，转头不会移动靶区。采用更新材料的 3.5–8.5 米深度，其余刺激参数不变。顶部三块统计、中央准备倒计时和统一结算卡参考 Aim Lab 的简洁布局；手柄与射线保留。默认仍为手柄/键盘模拟；`TrainingEegPort` 预留 8765 端口、启停事件和目标编号校验，但没有网络传输和真实 EEG 识别。完整接入及训练架构改动须先确认，详见新版教程。
 
 内嵌第三方组件和字体遵循各自目录中的许可文件；本仓库不变更这些许可。
 详情见 [第三方组件说明](THIRD_PARTY_NOTICES.md)。

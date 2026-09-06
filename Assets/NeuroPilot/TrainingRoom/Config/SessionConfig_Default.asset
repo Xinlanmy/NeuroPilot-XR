@@ -24,7 +24,7 @@ MonoBehaviour:
   cooldownTime: 0
   spawnXRange: {x: -3, y: 3}
   spawnYRange: {x: 1.3, y: 2.2}
-  spawnZRange: {x: 1.5, y: 5.5}
+  spawnZRange: {x: 3.5, y: 8.5}
   viewMargin: 0.5
   ballDiameter: 0.25
   hitColor: {r: 0, g: 1, b: 0, a: 1}

@@ -41,8 +41,10 @@ public sealed class TrainingRoomEntry : MonoBehaviour
                 !InputDevices.GetDeviceAtXRNode(XRNode.Head).isValid && eyeHeight < 0.5f)
                 eyeHeight = 1.6f; // Desktop preview has no tracked floor-relative eye height.
             origin.MoveCameraToWorldLocation(new Vector3(0f, eyeHeight, 2.5f));
+            if (session != null && session.spawner != null)
+                session.spawner.SetTrainingFrame(camera.position, Quaternion.identity);
             if (hud != null)
-                hud.position = new Vector3(0f, camera.position.y, 4.6f);
+                hud.position = new Vector3(0f, Mathf.Max(camera.position.y, 1.6f), 5.2f);
         }
         IsReady = true;
         if (session != null) session.enabled = true;
