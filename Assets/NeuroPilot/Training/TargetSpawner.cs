@@ -10,8 +10,8 @@ namespace NeuroPilotXR.Training
     /// </summary>
     public sealed class TargetSpawner : MonoBehaviour
     {
-        [SerializeField] private float depthMin = 1.5f;
-        [SerializeField] private float depthMax = 5.5f;
+        [SerializeField] private float depthMin = 3.5f;
+        [SerializeField] private float depthMax = 8.5f;
         [SerializeField] private float viewMargin = 0.5f;
         [SerializeField] private float roomXRange = 3f;
         [SerializeField] private float roomYMin = 1.3f;
