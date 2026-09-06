@@ -15,7 +15,7 @@ namespace NeuroPilotXR.Training
         [SerializeField] private GameObject summaryPanel;
         [SerializeField] private TMP_Text summaryText;
 
-        public void UpdateStatus(float remainingSeconds, int hits, int misses)
+        public void UpdateStatus(float remainingSeconds, int hits, int misses, bool fusionOffline = false)
         {
             if (timeText != null)
             {
@@ -25,7 +25,9 @@ namespace NeuroPilotXR.Training
 
             if (statsText != null)
             {
-                statsText.text = $"命中 {hits}    漏失 {misses}";
+                statsText.text = fusionOffline
+                    ? $"命中 {hits}    漏失 {misses}   （EEG 离线·键盘模拟）"
+                    : $"命中 {hits}    漏失 {misses}";
             }
         }
 

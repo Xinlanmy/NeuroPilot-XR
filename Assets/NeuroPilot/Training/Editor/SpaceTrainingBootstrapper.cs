@@ -9,7 +9,7 @@ namespace NeuroPilotXR.Training
     /// <summary>
     /// 一键搭建 SSVEP 训练场景：目标球预制体 + 训练组件接线 + HUD。
     /// 菜单：NeuroPilot → 搭建 SSVEP 训练场景（在 SpaceTraining 场景中执行）。
-    /// 幂等：重复执行会复用已有对象，只补缺失部分。可 Ctrl+Z 撤销。
+    /// 幂等：重复执行会复用已有对象，只补缺失部分。新建/接线均走 Undo API，可 Ctrl+Z 撤销。
     /// </summary>
     public static class SpaceTrainingBootstrapper
     {
@@ -40,6 +40,15 @@ namespace NeuroPilotXR.Training
             }
 
             GameObject orbPrefab = EnsureOrbPrefab();
+            if (orbPrefab == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "SpaceTraining Bootstrapper",
+                    "球预制体创建失败：找不到可用 shader（URP/Unlit、Unlit/Color、Sprites/Default 均缺失）。\n请检查渲染管线设置后重试。",
+                    "确定");
+                return;
+            }
+
             TrainingHud hud = EnsureHud(cam);
             EnsureTrainingRoot(orbPrefab, hud);
 
@@ -61,28 +70,46 @@ namespace NeuroPilotXR.Training
             if (root == null)
             {
                 root = new GameObject("TrainingRoot");
+                Undo.RegisterCreatedObjectUndo(root, "SSVEP TrainingRoot");
             }
 
-            Undo.RegisterCreatedObjectUndo(root, "SSVEP TrainingRoot");
-
             var manager = root.GetComponent<TrialSessionManager>();
-            if (manager == null) manager = root.AddComponent<TrialSessionManager>();
+            if (manager == null) manager = Undo.AddComponent<TrialSessionManager>(root);
             var spawner = root.GetComponent<TargetSpawner>();
-            if (spawner == null) spawner = root.AddComponent<TargetSpawner>();
+            if (spawner == null) spawner = Undo.AddComponent<TargetSpawner>(root);
             var fusion = root.GetComponent<FusionLink>();
-            if (fusion == null) fusion = root.AddComponent<FusionLink>();
+            if (fusion == null) fusion = Undo.AddComponent<FusionLink>(root);
             var keyboard = root.GetComponent<KeyboardHitSource>();
-            if (keyboard == null) keyboard = root.AddComponent<KeyboardHitSource>();
+            if (keyboard == null) keyboard = Undo.AddComponent<KeyboardHitSource>(root);
             var eeg = root.GetComponent<EegHitSource>();
-            if (eeg == null) eeg = root.AddComponent<EegHitSource>();
+            if (eeg == null) eeg = Undo.AddComponent<EegHitSource>(root);
 
-            var so = new SerializedObject(manager);
-            so.FindProperty("targetPrefab").objectReferenceValue = orbPrefab;
-            so.FindProperty("spawner").objectReferenceValue = spawner;
-            so.FindProperty("hud").objectReferenceValue = hud;
-            so.FindProperty("fusionLink").objectReferenceValue = fusion;
-            so.FindProperty("keyboardHitSource").objectReferenceValue = keyboard;
-            so.FindProperty("eegHitSource").objectReferenceValue = eeg;
+            // 接线改动由 WireReference 内部 RecordObject 记录，可撤销；复用对象无需额外注册
+            WireReference(manager, "targetPrefab", orbPrefab);
+            WireReference(manager, "spawner", spawner);
+            WireReference(manager, "hud", hud);
+            WireReference(manager, "fusionLink", fusion);
+            WireReference(manager, "keyboardHitSource", keyboard);
+            WireReference(manager, "eegHitSource", eeg);
+        }
+
+        /// <summary>幂等接线：值已一致则跳过；变更经 RecordObject 记录，可 Ctrl+Z 撤销。</summary>
+        private static void WireReference(Object owner, string property, Object value)
+        {
+            if (value == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(owner);
+            var prop = so.FindProperty(property);
+            if (prop == null || prop.objectReferenceValue == value)
+            {
+                return;
+            }
+
+            Undo.RecordObject(owner, "SSVEP 接线：" + property);
+            prop.objectReferenceValue = value;
             so.ApplyModifiedProperties();
         }
 
@@ -100,8 +127,15 @@ namespace NeuroPilotXR.Training
             var material = AssetDatabase.LoadAssetAtPath<Material>(OrbMaterialPath);
             if (material == null)
             {
-                Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-                if (shader == null) shader = Shader.Find("Unlit/Color");
+                Shader shader = Shader.Find("Universal Render Pipeline/Unlit")
+                                ?? Shader.Find("Unlit/Color")
+                                ?? Shader.Find("Sprites/Default");
+                if (shader == null)
+                {
+                    Debug.LogError("[SpaceTrainingBootstrapper] 找不到可用 shader（URP/Unlit、Unlit/Color、Sprites/Default 均缺失），无法创建球材质");
+                    return null;
+                }
+
                 material = new Material(shader);
                 if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
                 if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
@@ -157,14 +191,12 @@ namespace NeuroPilotXR.Training
             var summary = CreateText(panel.transform, "SummaryText", new Vector2(0.5f, 0.5f), new Vector2(1400, 700), Vector2.zero, 56, TextAlignmentOptions.Center, Color.white);
             panel.SetActive(false);
 
-            var hud = canvasGo.AddComponent<TrainingHud>();
-            var so = new SerializedObject(hud);
-            so.FindProperty("timeText").objectReferenceValue = time;
-            so.FindProperty("statsText").objectReferenceValue = stats;
-            so.FindProperty("promptText").objectReferenceValue = prompt;
-            so.FindProperty("summaryPanel").objectReferenceValue = panel;
-            so.FindProperty("summaryText").objectReferenceValue = summary;
-            so.ApplyModifiedProperties();
+            var hud = Undo.AddComponent<TrainingHud>(canvasGo);
+            WireReference(hud, "timeText", time);
+            WireReference(hud, "statsText", stats);
+            WireReference(hud, "promptText", prompt);
+            WireReference(hud, "summaryPanel", panel);
+            WireReference(hud, "summaryText", summary);
             return hud;
         }
 

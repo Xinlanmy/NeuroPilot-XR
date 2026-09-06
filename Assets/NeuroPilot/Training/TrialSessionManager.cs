@@ -26,7 +26,9 @@ namespace NeuroPilotXR.Training
     /// Ready(3s) → Spawn → AwaitHit(12s 超时) → HitFeedback(绿 0.5s) / MissFeedback(灰 0.6s)
     /// → 立即下一球 …；180s 一轮，结束出结算。
     /// 命中源：键盘空格模拟（开发/演示）或融合层 command_fire（判定即执行）。
-    /// spawn/onset 等事件经 FusionLink 按契约上行；断线自动降级，训练不中断。
+    /// spawn/onset 等事件经 FusionLink 按契约上行；EegFusion 模式断线自动降级键盘模拟
+    /// （HUD 提示离线状态），训练不中断；融合层命中命令仅在 AwaitHit 且 target_id
+    /// 与当前目标一致时被接受。
     /// </summary>
     public sealed class TrialSessionManager : MonoBehaviour
     {
@@ -65,6 +67,11 @@ namespace NeuroPilotXR.Training
         private SsvepFlicker _currentFlicker;
         private string _currentTargetId;
         private long _onsetMs;
+        private bool _stimulusOpen;
+        private bool _warnedEegFallback;
+
+        /// <summary>兜底空命中源：引用未接线时避免 NullReferenceException（永不命中，由超时推进）。</summary>
+        private static readonly IHitSource NoopHit = new NullHitSource();
 
         private string LevelName => TrainingSession.SelectedDifficulty.ToString().ToLowerInvariant();
 
@@ -144,7 +151,7 @@ namespace NeuroPilotXR.Training
                 }
                 else if (hud != null)
                 {
-                    hud.UpdateStatus(roundSeconds - _roundElapsed, Hits, Misses);
+                    hud.UpdateStatus(roundSeconds - _roundElapsed, Hits, Misses, IsFusionOffline());
                 }
             }
 
@@ -161,9 +168,10 @@ namespace NeuroPilotXR.Training
             Misses = 0;
             _reactionSumSeconds = 0;
             _roundElapsed = 0;
-            _targetCounter = 0;
+            // target_id 编号跨轮次单调递增、永不重置：防止重置后新的 t1 接受上一轮遗留的迟到命令
+            CloseStimulus();
             ClearCurrentBall();
-            ResolveHitSource().ResetHit();
+            ResetAllHitSources();
             EnterPhase(TrialPhase.Ready);
             if (hud != null)
             {
@@ -191,6 +199,7 @@ namespace NeuroPilotXR.Training
                 return;
             }
 
+            CloseStimulus();
             ClearCurrentBall();
             _targetCounter++;
             _currentTargetId = "t" + _targetCounter;
@@ -205,7 +214,7 @@ namespace NeuroPilotXR.Training
             }
 
             _currentFlicker.StartFlicker(defaultFrequencyHz);
-            ResolveHitSource().ResetHit();
+            ResetAllHitSources();
             _onsetMs = FusionLink.NowMs();
             SendUpstream("stimulus_onset", new OnsetPayload
             {
@@ -214,6 +223,7 @@ namespace NeuroPilotXR.Training
                 level = LevelName,
                 wave = _wave,
             });
+            _stimulusOpen = true;
             EnterPhase(TrialPhase.AwaitHit);
             if (hud != null)
             {
@@ -227,7 +237,7 @@ namespace NeuroPilotXR.Training
             _reactionSumSeconds += reaction;
             Hits++;
             if (_currentFlicker != null) _currentFlicker.SetSolid(hitColor);
-            SendUpstream("stimulus_offset", new OffsetPayload { target_id = _currentTargetId });
+            CloseStimulus();
             EnterPhase(TrialPhase.HitFeedback);
         }
 
@@ -235,7 +245,7 @@ namespace NeuroPilotXR.Training
         {
             Misses++;
             if (_currentFlicker != null) _currentFlicker.SetSolid(missColor);
-            SendUpstream("stimulus_offset", new OffsetPayload { target_id = _currentTargetId });
+            CloseStimulus();
             EnterPhase(TrialPhase.MissFeedback);
         }
 
@@ -248,13 +258,14 @@ namespace NeuroPilotXR.Training
             }
 
             if (_currentFlicker != null) _currentFlicker.SetSolid(hitColor);
-            SendUpstream("stimulus_offset", new OffsetPayload { target_id = _currentTargetId });
+            CloseStimulus();
             SendSceneEvent("auto_activated");
             BeginSpawn();
         }
 
         private void EndRound()
         {
+            CloseStimulus();
             ClearCurrentBall();
             EnterPhase(TrialPhase.GameOver);
             int total = Hits + Misses;
@@ -273,15 +284,35 @@ namespace NeuroPilotXR.Training
             switch (type)
             {
                 case "command_fire":
-                    if (hitSourceMode != HitSourceMode.EegFusion || eegHitSource == null)
+                    if (hitSourceMode != HitSourceMode.EegFusion)
                     {
                         Debug.LogWarning("[TrialSession] 收到 command_fire，但命中源不是 EegFusion 模式，忽略");
                         return;
                     }
 
-                    eegHitSource.NotifyHit(payload.Str("target_id"));
+                    string fireTarget = payload.Str("target_id");
+                    if (Phase != TrialPhase.AwaitHit || string.IsNullOrEmpty(fireTarget) || fireTarget != _currentTargetId)
+                    {
+                        Debug.LogWarning($"[TrialSession] 拒绝 command_fire：target_id={(string.IsNullOrEmpty(fireTarget) ? "<空>" : fireTarget)}，" +
+                                         $"当前 {_currentTargetId ?? "<无>"}（Phase={Phase}）");
+                        return;
+                    }
+
+                    eegHitSource?.NotifyHit(fireTarget);
                     break;
                 case "command_auto":
+                    if (Phase != TrialPhase.AwaitHit)
+                    {
+                        return;
+                    }
+
+                    string autoTarget = payload.Str("target_id");
+                    if (!string.IsNullOrEmpty(autoTarget) && autoTarget != _currentTargetId)
+                    {
+                        Debug.LogWarning($"[TrialSession] 拒绝 command_auto：target_id={autoTarget}，当前 {_currentTargetId}");
+                        return;
+                    }
+
                     OnAutoActivate();
                     break;
                 case "command_difficulty":
@@ -297,7 +328,55 @@ namespace NeuroPilotXR.Training
 
         private IHitSource ResolveHitSource()
         {
-            return hitSourceMode == HitSourceMode.EegFusion ? (IHitSource)eegHitSource : keyboardHitSource;
+            if (hitSourceMode != HitSourceMode.EegFusion)
+            {
+                return keyboardHitSource != null ? keyboardHitSource : NoopHit;
+            }
+
+            // EegFusion：融合层在线且 EEG 命中源已接线才使用；否则降级键盘模拟并提示。
+            if (fusionLink != null && fusionLink.IsConnected && eegHitSource != null)
+            {
+                _warnedEegFallback = false;
+                return eegHitSource;
+            }
+
+            WarnEegFallbackOnce();
+            return keyboardHitSource != null ? keyboardHitSource : NoopHit;
+        }
+
+        private void ResetAllHitSources()
+        {
+            if (keyboardHitSource != null) keyboardHitSource.ResetHit();
+            if (eegHitSource != null) eegHitSource.ResetHit();
+        }
+
+        private void WarnEegFallbackOnce()
+        {
+            if (_warnedEegFallback)
+            {
+                return;
+            }
+
+            _warnedEegFallback = true;
+            Debug.LogWarning("[TrialSession] 融合层离线 / EEG 命中源未接线，降级为键盘空格模拟（HUD 显示离线状态）");
+        }
+
+        private bool IsFusionOffline()
+        {
+            return hitSourceMode == HitSourceMode.EegFusion &&
+                   (fusionLink == null || !fusionLink.IsConnected);
+        }
+
+        /// <summary>幂等关闭当前刺激：超时/重置等收球路径不再漏发 stimulus_offset。</summary>
+        private void CloseStimulus()
+        {
+            if (!_stimulusOpen)
+            {
+                return;
+            }
+
+            _stimulusOpen = false;
+            SendUpstream("stimulus_offset", new OffsetPayload { target_id = _currentTargetId });
         }
 
         private bool Elapsed(float duration) => Time.time - _phaseStart >= duration;
@@ -317,6 +396,15 @@ namespace NeuroPilotXR.Training
 
             _currentBall = null;
             _currentFlicker = null;
+        }
+
+        private sealed class NullHitSource : IHitSource
+        {
+            public bool HitPressed() => false;
+
+            public void ResetHit()
+            {
+            }
         }
 
         [Serializable]

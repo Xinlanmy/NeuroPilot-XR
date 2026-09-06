@@ -5,13 +5,15 @@ using System.Text;
 namespace NeuroPilotXR.Training
 {
     /// <summary>
-    /// 极简扁平 JSON 解析（零第三方依赖）。
-    /// 仅用于解析融合层下行信封：顶层对象，值支持 string / number / bool / null，
-    /// 嵌套对象与数组按深度跳过（下行 payload 均为扁平结构，契约见主仓库 app/unity/README.md）。
+    /// 极简 JSON 解析（零第三方依赖）。
+    /// 解析融合层下行信封：顶层值支持 string / number / bool / null / 嵌套对象，
+    /// 数组按深度跳过。契约信封为 {type, ts, seq, payload:{...}}（主仓库 app/unity/README.md），
+    /// payload 子对象经 Obj("payload") 单独取用，其内部字段为扁平标量。
     /// </summary>
     public sealed class FusionJson
     {
         private readonly Dictionary<string, string> _raw = new Dictionary<string, string>();
+        private readonly Dictionary<string, FusionJson> _nested = new Dictionary<string, FusionJson>();
 
         /// <summary>取数值；缺失或不可解析返回 fallback（默认 NaN）。</summary>
         public double Num(string key, double fallback = double.NaN)
@@ -58,6 +60,12 @@ namespace NeuroPilotXR.Training
 
         public bool Has(string key) => _raw.ContainsKey(key);
 
+        /// <summary>取嵌套子对象；缺失返回 null。</summary>
+        public FusionJson Obj(string key)
+        {
+            return _nested.TryGetValue(key, out FusionJson value) ? value : null;
+        }
+
         /// <summary>解析信封；type 缺失视为无效帧。</summary>
         public static bool TryParseEnvelope(string json, out string type, out FusionJson fields)
         {
@@ -100,7 +108,13 @@ namespace NeuroPilotXR.Training
                 {
                     result._raw[key] = ReadStringRaw(json, ref i);
                 }
-                else if (i < json.Length && (json[i] == '{' || json[i] == '['))
+                else if (i < json.Length && json[i] == '{')
+                {
+                    int start = i;
+                    if (!SkipBalanced(json, ref i)) return null;
+                    result._nested[key] = TryParse(json.Substring(start, i - start));
+                }
+                else if (i < json.Length && json[i] == '[')
                 {
                     if (!SkipBalanced(json, ref i)) return null;
                 }
