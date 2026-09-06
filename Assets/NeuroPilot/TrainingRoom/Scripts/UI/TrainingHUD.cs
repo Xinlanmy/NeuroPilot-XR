@@ -34,7 +34,7 @@ public class TrainingHUD : MonoBehaviour
             var difficulty = NeuroPilotXR.Navigation.TrainingSession.SelectedDifficulty;
             string label = difficulty == NeuroPilotXR.Navigation.DifficultyLevel.Beginner ? "轻度" :
                 difficulty == NeuroPilotXR.Navigation.DifficultyLevel.Advanced ? "挑战" : "标准";
-            modeText.text = "训练强度：" + label + "  ·  扳机 / 空格：模拟命中";
+            modeText.text = "TrainingRoom v1.1.1  ·  训练强度：" + label + "  ·  扳机 / 空格：模拟命中";
         }
     }
 

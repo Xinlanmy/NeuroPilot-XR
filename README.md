@@ -24,12 +24,12 @@
 
 ## 下载与文档
 
-- [1.1 Android 测试安装包](https://github.com/Xinlanmy/NeuroPilot-XR/releases/tag/v1.1.0)
+- [1.1.1 TrainingRoom 修复安装包](https://github.com/Xinlanmy/NeuroPilot-XR/releases/tag/v1.1.1)
 - [1.1 场景接入与安装教程](1.1场景接入与验收.md)
 - [新手操作教程](新手操作教程.md)
 - [拖动与启动定位修复验收](拖动与启动定位修复验收.md)
 
-APK 包名为 `com.neuropilot.xr`。1.1.0 是开发测试构建，versionCode 为 `3`；可覆盖安装之前的同签名测试版本。
+APK 包名为 `com.neuropilot.xr`。1.1.1 是开发测试构建，versionCode 为 `4`；可覆盖安装之前的同签名测试版本。
 
 ## 目录
 
@@ -52,7 +52,7 @@ Unity 缓存、日志、本地备份和构建产物不进入源码历史。最�
 
 1.0.1 已通过编译、Android APK 构建、左右手模拟输入拖动/松手/按钮点击，以及启动与恢复定位验证。正式头显手感、暂停恢复与 MR 合成仍需真机验收。当前 SDK 组合有 Android 15 16 KB 对齐相关警告，商店发布前需要单独处理。
 
-1.1 已通过编辑器端到端验证：入口按钮转场、唯一摄像机/XR Origin、强度传递、出球、键盘模拟命中、漏失、结算与重开。训练/结算预览及验收步骤见 [1.1 场景接入与验收](1.1场景接入与验收.md)。
+1.1.1 已通过编辑器端到端验证：入口按钮转场、唯一摄像机/XR Origin、强度传递、出球、键盘模拟命中、漏失、结算与重开。为避免与旧 APK 混淆，头显应用名显示为 `NeuroPilot XR 1.1.1`，入口显示 `v1.1.1 TRAININGROOM`。训练/结算预览及验收步骤见 [1.1 场景接入与验收](1.1场景接入与验收.md)。
 
 1.1 的默认训练场景为 `Assets/NeuroPilot/TrainingRoom/Scenes/TrainingRoom.unity`。旧 `SpaceTraining` 仅保留作历史占位，不参与当前构建。训练的命中输入仍为手柄/键盘模拟，`EegHitSource` 只是接口占位；未接入真实 EEG，也未验证头显实际闪烁频率。
 

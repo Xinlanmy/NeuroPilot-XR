@@ -105,6 +105,7 @@ namespace NeuroPilotXR.Editor
             Require(UnityEngine.Object.FindObjectOfType<SceneTransitionManager>() == null, "Transition overlay not cleaned up");
             Require(UnityEngine.Object.FindObjectOfType<VivePassthroughManager>() == null, "Navigation passthrough persisted");
             Require(TrainingSession.SelectedDifficulty == DifficultyLevel.Advanced && session.hud.modeText.text.Contains("挑战"), "Difficulty not retained");
+            Require(session.hud.modeText.text.Contains("TrainingRoom v1.1.1"), "Training scene version label missing");
             Require(Mathf.Approximately(session.config.roundDuration, 180f) && Mathf.Approximately(session.config.flickerHz, 15f), "Source configuration altered");
             Checks.Add("Navigation buttons -> imported TrainingRoom; one camera/rig; passthrough/overlay removed; difficulty retained; source parameters preserved.");
 

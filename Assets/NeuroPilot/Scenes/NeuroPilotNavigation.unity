@@ -5538,7 +5538,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: NEUROPILOT XR
+  m_text: "NEUROPILOT XR  \xB7  v1.1.1 TRAININGROOM"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: cbd9d3fa5d220694fb441fd93a57fd71, type: 2}
   m_sharedMaterial: {fileID: -3611266481758511796, guid: cbd9d3fa5d220694fb441fd93a57fd71, type: 2}

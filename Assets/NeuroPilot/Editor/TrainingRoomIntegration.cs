@@ -8,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.Rendering.Universal;
 using Unity.XR.CoreUtils;
@@ -21,7 +22,7 @@ namespace NeuroPilotXR.Editor
         public const string NavigationPath = "Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity";
         private const string Root = "Assets/NeuroPilot/TrainingRoom";
         private const string RigPath = "Assets/Samples/XR Interaction Toolkit/2.5.4/Starter Assets/Prefabs/XR Interaction Setup.prefab";
-        private const string ApkPath = "Builds/Android/NeuroPilotXR_1.1.0.apk";
+        private const string ApkPath = "Builds/Android/NeuroPilotXR_1.1.1_TrainingRoom.apk";
 
         [MenuItem("NeuroPilot/Training Room/Integrate Imported Scene")]
         public static void Prepare()
@@ -123,15 +124,18 @@ namespace NeuroPilotXR.Editor
             var serialized = new SerializedObject(transition);
             serialized.FindProperty("trainingSceneName").stringValue = "TrainingRoom";
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            var brand = UnityEngine.Object.FindObjectsOfType<TMP_Text>(true).FirstOrDefault(text => text.name == "BrandText");
+            if (brand != null) brand.text = "NEUROPILOT XR  ·  v1.1.1 TRAININGROOM";
             EditorSceneManager.SaveScene(scene);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(NavigationPath, true), new EditorBuildSettingsScene(ScenePath, true) };
-            PlayerSettings.bundleVersion = "1.1.0";
-            PlayerSettings.Android.bundleVersionCode = 3;
+            PlayerSettings.productName = "NeuroPilot XR 1.1.1";
+            PlayerSettings.bundleVersion = "1.1.1";
+            PlayerSettings.Android.bundleVersionCode = 4;
             AssetDatabase.SaveAssets();
             // Remove only obsolete adapter-generated helper materials; prefab shader references are restored above.
             AssetDatabase.DeleteAsset(Root + "/Materials/TrainingRoom_TunnelingVignette.mat");
             AssetDatabase.DeleteAsset(Root + "/Materials/TrainingRoom_Teleport_Interactor.mat");
-            Debug.Log("[TrainingRoomIntegration] Prepared 1.1.0 navigation -> TrainingRoom; source stimulus parameters preserved.");
+            Debug.Log("[TrainingRoomIntegration] Prepared 1.1.1 navigation -> TrainingRoom; source stimulus parameters preserved.");
         }
 
         private static void Format(Text text, Font font, Vector2 position, Vector2 size, int fontSize, Color color)
