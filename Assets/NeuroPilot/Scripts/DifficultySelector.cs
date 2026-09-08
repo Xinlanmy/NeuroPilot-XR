@@ -4,7 +4,6 @@ namespace NeuroPilotXR.Navigation
 {
     public sealed class DifficultySelector : MonoBehaviour
     {
-        [SerializeField] private DifficultyLevel defaultDifficulty = DifficultyLevel.Standard;
         [SerializeField] private DifficultyCardView[] cards;
 
         public DifficultyLevel CurrentDifficulty { get; private set; } = DifficultyLevel.Standard;
@@ -16,7 +15,7 @@ namespace NeuroPilotXR.Navigation
 
         private void Awake()
         {
-            Select(defaultDifficulty);
+            Select(TrainingSession.SelectedDifficulty);
         }
 
         public void Select(DifficultyLevel difficulty)

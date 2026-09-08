@@ -22,7 +22,7 @@ namespace NeuroPilotXR.Editor
         public const string NavigationPath = "Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity";
         private const string Root = "Assets/NeuroPilot/TrainingRoom";
         private const string RigPath = "Assets/Samples/XR Interaction Toolkit/2.5.4/Starter Assets/Prefabs/XR Interaction Setup.prefab";
-        public const string Version = "1.1.2";
+        public const string Version = "1.2.0";
         private const string ApkPath = "Builds/Android/NeuroPilotXR_" + Version + "_TrainingRoom.apk";
 
         [MenuItem("NeuroPilot/Training Room/Integrate Imported Scene")]
@@ -133,11 +133,12 @@ namespace NeuroPilotXR.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(NavigationPath, true), new EditorBuildSettingsScene(ScenePath, true) };
             PlayerSettings.productName = "NeuroPilot XR " + Version;
             PlayerSettings.bundleVersion = Version;
-            PlayerSettings.Android.bundleVersionCode = 5;
+            PlayerSettings.Android.bundleVersionCode = 6;
             AssetDatabase.SaveAssets();
             // Remove only obsolete adapter-generated helper materials; prefab shader references are restored above.
             AssetDatabase.DeleteAsset(Root + "/Materials/TrainingRoom_TunnelingVignette.mat");
             AssetDatabase.DeleteAsset(Root + "/Materials/TrainingRoom_Teleport_Interactor.mat");
+            ThreeModeSetup.Apply();
             Debug.Log("[TrainingRoomIntegration] Prepared " + Version + " navigation -> TrainingRoom; source stimulus parameters preserved.");
         }
 
@@ -167,7 +168,7 @@ namespace NeuroPilotXR.Editor
             Directory.CreateDirectory("Builds/Android");
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
-                scenes = new[] { NavigationPath, ScenePath },
+                scenes = ThreeModeSetup.ScenePaths,
                 locationPathName = ApkPath,
                 target = BuildTarget.Android,
                 options = BuildOptions.Development | BuildOptions.DetailedBuildReport

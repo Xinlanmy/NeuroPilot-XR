@@ -9,12 +9,11 @@ using UnityEngine;
 /// </summary>
 public sealed class TrainingEegPort : MonoBehaviour
 {
-    [Header("Python 连接预留（本版不自动联网）")]
-    [Tooltip("APK 应填写采集电脑局域网 IP；留空表示尚未配置。")]
-    public string serverHost = "";
-    [Range(1, 65535)] public int serverPort = 8765;
-    [Tooltip("仅供后续适配器联调；启用后不再把扳机/空格计为脑电命中。")]
-    public bool eegInputEnabled;
+    // Shared connection reservation; no automatic networking in this version.
+    public string serverHost => NeuroPilotXR.Navigation.CommunicationSettings.Host;
+    public int serverPort => NeuroPilotXR.Navigation.CommunicationSettings.Port;
+    [Tooltip("接受后续脑电适配器的确认；关闭后暂停接收，不回退为扳机/空格。")]
+    public bool eegInputEnabled = true;
 
     public event Action<string> OutgoingMessage;
     public string CurrentTargetId { get; private set; }

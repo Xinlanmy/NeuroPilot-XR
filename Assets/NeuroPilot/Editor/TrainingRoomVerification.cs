@@ -93,6 +93,8 @@ namespace NeuroPilotXR.Editor
             yield return 1f;
             GameObject.Find("EnterTrainingButton").GetComponent<Button>().onClick.Invoke();
             yield return 0.6f;
+            GameObject.Find("SingleModeButton").GetComponent<Button>().onClick.Invoke();
+            yield return 0.6f;
             UnityEngine.Object.FindObjectOfType<DifficultySelector>().Select(DifficultyLevel.Advanced);
             GameObject.Find("StartTrainingButton").GetComponent<Button>().onClick.Invoke();
             while (SceneManager.GetActiveScene().name != "TrainingRoom") yield return 0.1f;
@@ -137,16 +139,20 @@ namespace NeuroPilotXR.Editor
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Space));
             yield return 0.1f;
             InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-            Require(session.HitCount == 1, "Space input did not register a hit");
+            Require(session.HitCount == 0, "Keyboard incorrectly confirmed an EEG target");
+            Require(session.EegPort.eegInputEnabled && session.EegPort.TryReceiveCommand(FireJson(session.EegPort.CurrentTargetId, 0)), "Single EEG command rejected");
+            yield return .1f;
+            Require(session.HitCount == 1, "EEG confirmation did not register a hit");
             Require(session.hud.statText.text == "1" && session.hud.accuracyText.text == "100%", "Stats cards not updated");
-            Checks.Add("Active URP stimulus ball; Input System Space event increments hit count.");
+            Checks.Add("Single SSVEP: Space cannot confirm; only valid EEG target command increments count and produces reward.");
 
             // Change only a runtime clone to exercise misses and timeout without a three-minute test.
             var config = UnityEngine.Object.Instantiate(session.config);
             session.config = config; session.spawner.config = config;
             config.readyCountdown = 0.1f;
             var port = session.EegPort;
-            Require(port != null && !port.eegInputEnabled && port.serverPort == 8765 && string.IsNullOrEmpty(port.serverHost), "EEG reservation defaults incorrect");
+            Require(port != null && port.eegInputEnabled && port.serverPort == CommunicationSettings.Port && port.serverHost == CommunicationSettings.Host, "EEG shared settings incorrect");
+            port.ResetConnectionSequence();
             var events = new List<TrainingEegPort.Envelope>();
             port.OutgoingMessage += json => events.Add(JsonUtility.FromJson<TrainingEegPort.Envelope>(json));
             port.eegInputEnabled = true;
@@ -170,7 +176,7 @@ namespace NeuroPilotXR.Editor
                 Require(events.FindAll(e => e.type == "stimulus_offset" && e.payload.target_id == onset.payload.target_id).Count == 1, "Unpaired stimulus lifecycle");
             port.eegInputEnabled = false;
             session.RestartRound();
-            Checks.Add("EEG seam only (no socket): defaults offline/manual; nested JSON fire; reject malformed/wrong/stale/duplicate/unsupported commands; unique target IDs; onset/offset paired on hit and reset.");
+            Checks.Add("EEG seam only (no socket): EEG-only input; nested JSON fire; reject malformed/wrong/stale/duplicate/unsupported commands; unique target IDs; onset/offset paired on hit and reset.");
             config.maxExposeTime = 0.2f; config.hitFeedbackTime = 0.05f;
             config.missFeedbackTime = 0.05f; config.cooldownTime = 0.05f;
             while (session.MissCount == 0) yield return 0.1f;
@@ -239,7 +245,7 @@ namespace NeuroPilotXR.Editor
             finally { UnityEngine.Random.state = state; }
         }
 
-        private static void Capture(string fileName)
+        internal static void Capture(string fileName)
         {
             Canvas.ForceUpdateCanvases();
             var camera = Camera.main;

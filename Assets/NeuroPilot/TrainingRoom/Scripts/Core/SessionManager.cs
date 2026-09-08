@@ -46,12 +46,7 @@ public class SessionManager : MonoBehaviour
     {
         EegPort = GetComponent<TrainingEegPort>();
         if (config == null) config = ScriptableObject.CreateInstance<SessionConfig>();
-        // 默认键盘模拟源（若场景没注入）
-        if (hitSource == null)
-        {
-            var k = gameObject.AddComponent<KeyboardHitSource>();
-            hitSource = k;
-        }
+        // EEG is the only confirmation source. Controllers remain available for UI, not simulated hits.
         RoundRemain = config.roundDuration;
         ChangeState(State.Ready);
     }
@@ -89,7 +84,7 @@ public class SessionManager : MonoBehaviour
                 break;
 
             case State.AwaitHit:
-                if (EegPort != null && EegPort.eegInputEnabled ? EegPort.ConsumeHit() : hitSource.HitPressed())
+                if (EegPort != null && EegPort.eegInputEnabled && EegPort.ConsumeHit())
                 {
                     _totalReaction += Time.time - _ballSpawnTime;
                     _reactionSamples++;
@@ -151,6 +146,12 @@ public class SessionManager : MonoBehaviour
                 HitCount++;
                 _stateTimer = config.hitFeedbackTime;
                 if (spawner != null) spawner.PlayHitFeedback(config.hitColor, config.hitFeedbackTime);
+                var reward = GetComponent<NeuroPilotXR.Navigation.SuccessReward>();
+                if (reward != null && spawner != null && spawner.ball != null)
+                {
+                    reward.Play(spawner.ball.position);
+                    spawner.DespawnCurrent();
+                }
                 if (hud != null) hud.OnHit();
                 break;
 

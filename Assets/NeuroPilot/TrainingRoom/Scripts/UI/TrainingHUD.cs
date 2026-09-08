@@ -44,7 +44,7 @@ public class TrainingHUD : MonoBehaviour
                 difficulty == NeuroPilotXR.Navigation.DifficultyLevel.Advanced ? "挑战" : "标准";
             modeText.text = "TrainingRoom v" + Application.version + "  ·  " + label + "  ·  " +
                 (session != null && session.EegPort != null && session.EegPort.eegInputEnabled
-                    ? "EEG 接口模式（需适配器）" : "扳机 / 空格模拟  ·  EEG 未连接");
+                    ? "脑电 SSVEP · 接口待接入" : "脑电确认已暂停");
         }
     }
 

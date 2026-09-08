@@ -9,6 +9,7 @@ public sealed class TrainingRoomEntry : MonoBehaviour
     public XROrigin origin;
     public SessionManager session;
     public Transform hud;
+    public Vector3 TrainingOrigin { get; private set; }
     public bool IsReady { get; private set; }
 
     private void Awake()
@@ -41,6 +42,7 @@ public sealed class TrainingRoomEntry : MonoBehaviour
                 !InputDevices.GetDeviceAtXRNode(XRNode.Head).isValid && eyeHeight < 0.5f)
                 eyeHeight = 1.6f; // Desktop preview has no tracked floor-relative eye height.
             origin.MoveCameraToWorldLocation(new Vector3(0f, eyeHeight, 2.5f));
+            TrainingOrigin = camera.position;
             if (session != null && session.spawner != null)
                 session.spawner.SetTrainingFrame(camera.position, Quaternion.identity);
             if (hud != null)

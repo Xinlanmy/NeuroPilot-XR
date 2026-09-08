@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 345be33fedef7aa49b710393754ecb77, type: 3}
+  m_Name: EyeTracking_Area
+  m_EditorClassIdentifier: 
+  roundDuration: 180
+  readyCountdown: 3
+  flickerHz: 15
+  dutyCycle: 0.5
+  onColor: {r: 1, g: 1, b: 1, a: 1}
+  offColor: {r: 0.07, g: 0.07, b: 0.07, a: 1}
+  maxExposeTime: 12
+  hitFeedbackTime: 0.5
+  missFeedbackTime: 0.6
+  cooldownTime: 0
+  spawnZRange: {x: 3.5, y: 8.5}
+  spawnXRange: {x: -3, y: 3}
+  spawnYRange: {x: 1.3, y: 2.2}
+  viewMargin: 0.5
+  ballDiameter: 0.25
+  hitColor: {r: 0, g: 1, b: 0, a: 1}
+  missColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}

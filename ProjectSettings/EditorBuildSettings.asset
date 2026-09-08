@@ -11,6 +11,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/NeuroPilot/TrainingRoom/Scenes/TrainingRoom.unity
     guid: 1dca5494c32e2724fa1b180579d85a67
+  - enabled: 1
+    path: Assets/NeuroPilot/TrainingRoom/Scenes/EyeTrackingRoom.unity
+    guid: fdfd0385e7508664d978bf2797220d88
+  - enabled: 1
+    path: Assets/NeuroPilot/TrainingRoom/Scenes/MultiTargetRoom.unity
+    guid: 8b8bba24b76dc2d459d3b4154c842687
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 4451d5afd259bf54ca0c83eb4e3adc1d, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 5ce2ca58e3e701241b77a77b8789ff53, type: 2}

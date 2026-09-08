@@ -18,6 +18,17 @@ namespace NeuroPilotXR.Navigation
         [SerializeField, Min(0.1f)] private float fadeDuration = 0.45f;
 
         private bool transitioning;
+        public bool IsTransitioning => transitioning;
+
+        public void BeginMode(string scene, CanvasGroup content, TMP_Text status, Button trigger)
+        {
+            if (transitioning) return;
+            trainingSceneName = scene;
+            difficultyContent = content;
+            preparingText = status;
+            startButton = trigger;
+            BeginTraining();
+        }
 
         public void Configure(
             CanvasGroup content,
