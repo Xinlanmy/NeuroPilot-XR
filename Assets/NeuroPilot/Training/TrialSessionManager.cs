@@ -99,6 +99,7 @@ namespace NeuroPilotXR.Training
                 _viewCamera = FindFirstObjectByType<Camera>();
             }
 
+            FusionServerConfigPanel.Ensure(fusionLink);
             BeginReady();
         }
 

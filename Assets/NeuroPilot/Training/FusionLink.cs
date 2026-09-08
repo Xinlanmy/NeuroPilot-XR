@@ -22,6 +22,7 @@ namespace NeuroPilotXR.Training
     public sealed class FusionLink : MonoBehaviour
     {
         private const int LoopsShutdownTimeoutMs = 3000;
+        private const string ServerUrlPrefsKey = "fusion_server_url";
 
         [SerializeField] private string serverUrl = "ws://127.0.0.1:8765";
         [SerializeField] private bool autoConnect = true;
@@ -49,6 +50,66 @@ namespace NeuroPilotXR.Training
 
         /// <summary>Unix 毫秒时间戳（契约 t_ms 口径，与 Python 侧 recv_ts 对齐用）。</summary>
         public static long NowMs() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        /// <summary>地址覆盖优先级：Inspector 默认 &lt; PlayerPrefs（配置面板保存）&lt; 覆盖文件
+        /// （persistentDataPath/fusion_url.txt，adb push 兜底——系统键盘不可用时仍能改地址）。</summary>
+        private void Awake()
+        {
+            string saved = PlayerPrefs.GetString(ServerUrlPrefsKey, null);
+            if (!string.IsNullOrEmpty(saved))
+            {
+                serverUrl = saved;
+            }
+
+            try
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, "fusion_url.txt");
+                if (System.IO.File.Exists(path))
+                {
+                    string fromFile = System.IO.File.ReadAllText(path).Trim();
+                    if (!string.IsNullOrEmpty(fromFile))
+                    {
+                        serverUrl = fromFile;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[FusionLink] 读取地址覆盖文件失败：{ex.Message}");
+            }
+        }
+
+        /// <summary>运行时改地址（FusionServerConfigPanel 用）：持久化 + 立即重连。缺协议头自动补 ws://。</summary>
+        public void ApplyServerUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return;
+            }
+
+            url = url.Trim();
+            if (!url.StartsWith("ws://") && !url.StartsWith("wss://"))
+            {
+                url = "ws://" + url;
+            }
+
+            if (url == serverUrl)
+            {
+                return;
+            }
+
+            serverUrl = url;
+            PlayerPrefs.SetString(ServerUrlPrefsKey, serverUrl);
+            PlayerPrefs.Save();
+
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                _cts = null;
+            }
+
+            StartClient();
+        }
 
         private void Start()
         {
