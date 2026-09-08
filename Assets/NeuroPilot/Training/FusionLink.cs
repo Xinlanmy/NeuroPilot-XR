@@ -175,7 +175,12 @@ namespace NeuroPilotXR.Training
                     }
 
                     DisposeSocket(socket);
-                    _socket = null;
+                    // 只清理本轮自己的 socket：ApplyServerUrl 重连时新客户端可能已挂上 _socket
+                    if (ReferenceEquals(_socket, socket))
+                    {
+                        _socket = null;
+                    }
+
                     DrainOutbox();
                 }
 
