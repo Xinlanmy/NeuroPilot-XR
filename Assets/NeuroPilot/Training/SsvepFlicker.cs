@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using Stopwatch = System.Diagnostics.Stopwatch;
 using UnityEngine;
 
 namespace NeuroPilotXR.Training
