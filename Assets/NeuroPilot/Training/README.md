@@ -7,7 +7,7 @@ Unity ↔ Python 事件契约。对应 openspec add-core-system §5.0-§5.2。
 
 | 组件 | 职责 |
 |---|---|
-| `SsvepFlicker.cs` | 频闪控制器：Stopwatch 相位驱动 50% 方波（默认 15Hz，纯白↔深灰 0.07），MaterialPropertyBlock 切 `_BaseColor`/`_Color`（URP/Built-in 通用） |
+| `SsvepFlicker.cs` | 频闪控制器：Stopwatch 相位驱动 50% 方波（默认 12Hz，纯白↔深灰 0.07），MaterialPropertyBlock 切 `_BaseColor`/`_Color`（URP/Built-in 通用） |
 | `TargetSpawner.cs` | 出球器：相机局部空间视野锥取点（深度 1.5-5.5m、FOV 半宽高-0.5m 边距、房间 clamp、最小间距 1.2m 不重复） |
 | `TrialSessionManager.cs` | 会话状态机：Ready(3s)→Spawn→AwaitHit(12s 超时)→HitFeedback(绿 0.5s)/MissFeedback(灰 0.6s)→下一球；180s 结束出结算（按 R 重开） |
 | `IHitSource.cs` + `KeyboardHitSource.cs` / `EegHitSource.cs` | 命中源抽象：空格模拟 / 融合层 command_fire（`NotifyHit()` 判定即执行） |
@@ -20,7 +20,7 @@ Unity ↔ Python 事件契约。对应 openspec add-core-system §5.0-§5.2。
 
 1. 打开 `Assets/NeuroPilot/Scenes/SpaceTraining.unity`
 2. 菜单 **NeuroPilot → 搭建 SSVEP 训练场景 (SpaceTraining)**（生成球预制体/TrainingRoot/HUD 并接线）
-3. Play：3s 准备 → 球出现并 15Hz 闪烁 → **空格 = 模拟命中**（球变绿 0.5s → 立即下一球）；12s 未命中变灰；180s 结束出结算
+3. Play：3s 准备 → 球出现并 12Hz 闪烁 → **空格 = 模拟命中**（球变绿 0.5s → 立即下一球）；12s 未命中变灰；180s 结束出结算
 4. 结算面板按 **R** 重新开始
 
 ## 融合层联调（主仓库 neuropilot-xr）

@@ -12,7 +12,7 @@ public class SessionConfig : ScriptableObject
     [Tooltip("开场准备倒计时(秒)")] public float readyCountdown = 3f;
 
     [Header("SSVEP 刺激")]
-    [Tooltip("闪烁频率(Hz)")] public float flickerHz = 15f;
+    [Tooltip("闪烁频率(Hz)，须在算法侧 FBCCA 模板频率池 [12,10,8,6] 内")] public float flickerHz = 12f;
     [Tooltip("占空比 0~1，默认 0.5")] [Range(0.05f, 0.95f)] public float dutyCycle = 0.5f;
     [Tooltip("亮态颜色")] public Color onColor = Color.white;
     [Tooltip("暗态颜色")] public Color offColor = Color.black;

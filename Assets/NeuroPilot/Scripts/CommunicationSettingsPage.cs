@@ -129,12 +129,14 @@ namespace NeuroPilotXR.Navigation
         private sealed class ConnectionTestDialog : MonoBehaviour
         {
             private GameObject root;
+            private TMP_Text titleText;
             private TMP_Text message;
 
             public void Show(string title, string content, Color color)
             {
                 if (root == null) Build();
                 root.SetActive(true);
+                titleText.text = title;
                 message.text = content;
                 message.color = color;
             }
@@ -156,7 +158,7 @@ namespace NeuroPilotXR.Navigation
                 cardRt.sizeDelta = new Vector2(840, 480);
                 card.GetComponent<Image>().color = new Color(0.05f, 0.08f, 0.13f, 0.96f);
 
-                CreateText(card.transform, "Title", "连接测试", new Vector2(0, 170), new Vector2(760, 56), 40, new Color(0.9f, 0.95f, 1f));
+                titleText = CreateText(card.transform, "Title", "连接测试", new Vector2(0, 170), new Vector2(760, 56), 40, new Color(0.9f, 0.95f, 1f));
                 message = CreateText(card.transform, "Message", "", new Vector2(0, 10), new Vector2(760, 240), 30, Color.white);
 
                 var btn = new GameObject("CloseButton", typeof(RectTransform), typeof(Image), typeof(Button));

@@ -2188,7 +2188,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56b0c929e2563df4fb001d15c0bace3c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _hz: 15
+  _hz: 12
   _duty: 0.5
   _onColor: {r: 1, g: 1, b: 1, a: 1}
   _offColor: {r: 0, g: 0, b: 0, a: 1}

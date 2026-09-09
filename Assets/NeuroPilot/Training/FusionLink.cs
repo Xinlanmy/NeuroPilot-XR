@@ -31,8 +31,9 @@ namespace NeuroPilotXR.Training
         /// <summary>下行命令分发事件（主线程）：type 为 command_* 之一，payload 为信封 payload 子对象（无 payload 时为顶层视图）。</summary>
         public event Action<string, FusionJson> CommandReceived;
 
-        /// <summary>下行信封原文（主线程）：供自带信封校验的缝（v1.2.0 TryReceiveCommand）使用；含未知类型。</summary>
-        public event Action<string> RawMessageReceived;
+        /// <summary>下行 command_* 信封原文（主线程）：供自带信封校验的缝（v1.2.0 TryReceiveCommand）使用。
+        /// 只分发 command_ 前缀信封——ping 等心跳与非命令类型不进入，避免每秒心跳流经命令解析缝。</summary>
+        public event Action<string> CommandEnvelopeReceived;
 
         /// <summary>每次新连接建立后触发（主线程续体）：适配器在此复位下行 seq 基线。</summary>
         public event Action Connected;
@@ -261,9 +262,9 @@ namespace NeuroPilotXR.Training
 
                     if (FusionJson.TryParseEnvelope(sb.ToString(), out string type, out FusionJson envelope))
                     {
-                        RawMessageReceived?.Invoke(sb.ToString());
-                        if (type != "ping")
+                        if (type != "ping" && type.StartsWith("command_", StringComparison.Ordinal))
                         {
+                            CommandEnvelopeReceived?.Invoke(sb.ToString());
                             FusionJson payload = envelope.Obj("payload") ?? envelope;
                             CommandReceived?.Invoke(type, payload);
                         }

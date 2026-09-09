@@ -29,15 +29,17 @@ namespace NeuroPilotXR.Training
                 _link = gameObject.AddComponent<FusionLink>();
             }
 
-            // 先按共享通信设置定向，避免首连打向 FusionLink 默认的 127.0.0.1
-            // （FusionLink.Awake 可能后跑覆盖此值，Update 每帧兜底同步）。
+            // 先按共享通信设置定向，避免首连打向 FusionLink 默认的 127.0.0.1。
+            // 自举路径时序确定：AddComponent 同步执行 FusionLink.Awake（读 PlayerPrefs）后
+            // 返回本行赋值，Endpoint 胜出；FusionLink.Start(autoConnect) 在所有 Awake 之后
+            // 才发起首连。Update 的比较仅作设置页改址后的免重启同步兜底。
             _link.ServerUrl = NeuroPilotXR.Navigation.CommunicationSettings.Endpoint;
         }
 
         private void OnEnable()
         {
             _link.Connected += OnConnected;
-            _link.RawMessageReceived += OnRawMessage;
+            _link.CommandEnvelopeReceived += OnRawMessage;
             if (_single != null) _single.OutgoingMessage += _link.SendRaw;
             if (_multi != null) _multi.OutgoingEvent += _link.SendRaw;
             if (_link.IsConnected)
@@ -49,7 +51,7 @@ namespace NeuroPilotXR.Training
         private void OnDisable()
         {
             _link.Connected -= OnConnected;
-            _link.RawMessageReceived -= OnRawMessage;
+            _link.CommandEnvelopeReceived -= OnRawMessage;
             if (_single != null) _single.OutgoingMessage -= _link.SendRaw;
             if (_multi != null) _multi.OutgoingEvent -= _link.SendRaw;
         }
