@@ -17,3 +17,4 @@
 *.aar -text
 *.apk -text
 *.pdf -text
+*.zip binary

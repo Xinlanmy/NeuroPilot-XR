@@ -29,6 +29,7 @@
 
 ## 下载与文档
 
+- [VIVE USB 串流驱动与安装说明（Windows）](Tools/Drivers/VIVE/README.md)
 - [1.2.0 三模式使用、脑电协议与验收说明](1.2.0三模式与反馈说明.md)
 - 1.2.0 本地 APK 输出：`Builds/Android/NeuroPilotXR_1.2.0_TrainingRoom.apk`；未因此自动更新 GitHub Release。
 - [1.1.2 正前方出球与 EEG 接口预留版](https://github.com/Xinlanmy/NeuroPilot-XR/releases/tag/v1.1.2)
@@ -52,6 +53,7 @@ APK 包名为 `com.neuropilot.xr`。1.2.0 开发测试构建的 versionCode 为 
 | `Assets/NeuroPilot/Previews` | 开发过程预览截图，真机效果以头显为准 |
 | `Packages` | 依赖清单、锁文件及内嵌 VIVE OpenXR / Unity MCP 包 |
 | `ProjectSettings` | Unity、Android、OpenXR 和渲染设置 |
+| `Tools/Drivers/VIVE` | Windows PC 端 VIVE USB 串流驱动原包、安装说明与 SHA-256 校验值 |
 
 Unity 缓存、日志、本地备份和构建产物不进入源码历史。最新 APK 作为 GitHub Release 附件提供。
 
