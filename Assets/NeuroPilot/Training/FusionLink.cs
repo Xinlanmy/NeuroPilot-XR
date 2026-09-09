@@ -31,6 +31,12 @@ namespace NeuroPilotXR.Training
         /// <summary>下行命令分发事件（主线程）：type 为 command_* 之一，payload 为信封 payload 子对象（无 payload 时为顶层视图）。</summary>
         public event Action<string, FusionJson> CommandReceived;
 
+        /// <summary>下行信封原文（主线程）：供自带信封校验的缝（v1.2.0 TryReceiveCommand）使用；含未知类型。</summary>
+        public event Action<string> RawMessageReceived;
+
+        /// <summary>每次新连接建立后触发（主线程续体）：适配器在此复位下行 seq 基线。</summary>
+        public event Action Connected;
+
         /// <summary>当前连接的 socket（仅状态查询；收发循环使用各自局部引用）。</summary>
         private ClientWebSocket _socket;
         private CancellationTokenSource _cts;
@@ -152,6 +158,7 @@ namespace NeuroPilotXR.Training
                     await socket.ConnectAsync(new Uri(serverUrl), roundCts.Token);
                     _warnedOffline = false;
                     Debug.Log($"[FusionLink] 已连接 {serverUrl}");
+                    Connected?.Invoke();
                     receive = ReceiveLoop(socket, roundCts.Token);
                     send = SendLoop(socket, roundCts.Token);
                     await Task.WhenAny(receive, send);
@@ -252,10 +259,14 @@ namespace NeuroPilotXR.Training
                         return;
                     }
 
-                    if (FusionJson.TryParseEnvelope(sb.ToString(), out string type, out FusionJson envelope) && type != "ping")
+                    if (FusionJson.TryParseEnvelope(sb.ToString(), out string type, out FusionJson envelope))
                     {
-                        FusionJson payload = envelope.Obj("payload") ?? envelope;
-                        CommandReceived?.Invoke(type, payload);
+                        RawMessageReceived?.Invoke(sb.ToString());
+                        if (type != "ping")
+                        {
+                            FusionJson payload = envelope.Obj("payload") ?? envelope;
+                            CommandReceived?.Invoke(type, payload);
+                        }
                     }
                 }
             }
@@ -346,6 +357,12 @@ namespace NeuroPilotXR.Training
             }
 
             Enqueue(json + "}");
+        }
+
+        /// <summary>上行完整信封原文：缝自带 ts/seq 时使用（v1.2.0 TrainingEegPort / TargetPracticeSession）。</summary>
+        public void SendRaw(string json)
+        {
+            Enqueue(json);
         }
 
         private void SendPing()
