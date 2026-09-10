@@ -47,7 +47,7 @@ namespace NeuroPilotXR.Training
         [SerializeField] private float awaitHitTimeout = 12f;
         [SerializeField] private float hitFeedbackSeconds = 0.5f;
         [SerializeField] private float missFeedbackSeconds = 0.6f;
-        [SerializeField] private float defaultFrequencyHz = 15f;
+        [SerializeField] private float defaultFrequencyHz = 12f;
 
         [Header("反馈配色（绿=命中 / 灰=漏失）")]
         [SerializeField] private Color hitColor = new Color(0.2f, 0.9f, 0.3f);

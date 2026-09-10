@@ -1,0 +1,36 @@
+name: Unity validation
+
+on:
+  pull_request:
+  push:
+    branches: [main, "feat/**"]
+  workflow_dispatch:
+
+jobs:
+  release-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate scenes, Android profile, and SSVEP contract
+        run: python Tools/validate_release.py
+
+  unity-editmode:
+    runs-on: ubuntu-latest
+    env:
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Unity compile and EditMode contract tests
+        if: env.UNITY_LICENSE != ''
+        uses: game-ci/unity-test-runner@v4
+        with:
+          projectPath: .
+          unityVersion: 2022.3.62f1
+          testMode: editmode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Explain skipped licensed Unity job
+        if: env.UNITY_LICENSE == ''
+        run: echo "UNITY_LICENSE is not configured; deterministic release-contract checks still ran."

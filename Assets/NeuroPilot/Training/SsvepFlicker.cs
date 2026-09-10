@@ -6,12 +6,12 @@ namespace NeuroPilotXR.Training
     /// <summary>
     /// SSVEP 频闪：Stopwatch 相位驱动，每帧判定亮/暗，仅状态翻转时刷材质（50% 方波）。
     /// 不用 Time.deltaTime 累加，防止高刷新率头显上频率漂移（9/5 实测方案）。
-    /// 频率精度只受刷新率离散化影响：15Hz@120Hz = 8 帧整周期精确；其余频率有亚帧误差，
+    /// 频率精度只受刷新率离散化影响：12Hz@120Hz = 10 帧整周期精确；其余频率有亚帧误差，
     /// 由 openspec 5.0 串流闸门实测（记录 FFT 峰值 vs 标称偏差）。
     /// </summary>
     public sealed class SsvepFlicker : MonoBehaviour
     {
-        [SerializeField] private float frequencyHz = 15f;
+        [SerializeField] private float frequencyHz = 12f;
         [SerializeField] private Color onColor = Color.white;
         [SerializeField] private Color offColor = new Color(0.07f, 0.07f, 0.07f);
 

@@ -427,13 +427,11 @@ namespace NeuroPilotXR.Editor
             CreateImage(panel.transform, "TopEdgeSheen", new Vector2(1060f, 3f), new Vector2(0f, 432f), new Color(0.36f, 0.74f, 1f, 0.38f), false);
 
             CanvasGroup welcome = CreatePage(panel.transform, "WelcomePage");
-            CreateText(welcome.transform, "BrandText", "NEUROPILOT XR", 26f, new Vector2(900f, 44f), new Vector2(0f, 300f), new Color(0.35f, 0.72f, 1f, 0.72f), FontStyles.Normal);
             CreateText(welcome.transform, "TitleGlow", "注意力训练中心", 118f, new Vector2(1080f, 170f), new Vector2(0f, 52f), new Color(0.06f, 0.40f, 1f, 0.22f), FontStyles.Bold);
             TMP_Text mainTitle = CreateText(welcome.transform, "MainTitle", "注意力训练中心", 114f, new Vector2(1080f, 170f), new Vector2(0f, 58f), Color.white, FontStyles.Bold);
             ApplyTitleGradient(mainTitle);
             CreateImage(welcome.transform, "TitleGlowLineWide", new Vector2(760f, 30f), new Vector2(0f, -45f), new Color(0.02f, 0.30f, 1f, 0.06f), false);
             CreateImage(welcome.transform, "TitleGlowLine", new Vector2(650f, 5f), new Vector2(0f, -45f), new Color(0.18f, 0.68f, 1f, 0.86f), false);
-            CreateText(welcome.transform, "Subtitle", "沉浸式脑机注意力训练系统", 26f, new Vector2(900f, 50f), new Vector2(0f, -92f), new Color(0.58f, 0.76f, 0.94f, 0.82f), FontStyles.Normal);
             Vector2 enterPosition = new Vector2(0f, -286f);
             CreateImage(welcome.transform, "EnterButtonGlowWide", new Vector2(560f, 154f), enterPosition, new Color(0.02f, 0.36f, 1f, 0.08f), false);
             CreateImage(welcome.transform, "EnterButtonGlow", new Vector2(530f, 136f), enterPosition, new Color(0.04f, 0.54f, 1f, 0.20f), false);
@@ -447,12 +445,11 @@ namespace NeuroPilotXR.Editor
 
             TMP_Text pageTitle = CreateText(difficultyContent.transform, "PageTitle", "选择训练强度", 62f, new Vector2(1000f, 90f), new Vector2(0f, 345f), Color.white, FontStyles.Bold);
             ApplyTitleGradient(pageTitle);
-            CreateText(difficultyContent.transform, "PageSubtitle", "根据当前状态选择合适的训练等级", 27f, new Vector2(1000f, 55f), new Vector2(0f, 278f), new Color(0.82f, 0.87f, 0.93f, 0.88f), FontStyles.Normal);
 
             DifficultySelector selector = root.AddComponent<DifficultySelector>();
-            DifficultyCardView beginner = CreateDifficultyCard(difficultyContent.transform, selector, DifficultyLevel.Beginner, -340f, "Level 01", "轻度", "Beginner", "适合首次体验\n训练节奏舒缓\n刺激负荷较低");
-            DifficultyCardView standard = CreateDifficultyCard(difficultyContent.transform, selector, DifficultyLevel.Standard, 0f, "Level 02", "标准", "Standard", "推荐训练模式\n节奏适中\n保持持续专注");
-            DifficultyCardView advanced = CreateDifficultyCard(difficultyContent.transform, selector, DifficultyLevel.Advanced, 340f, "Level 03", "挑战", "Advanced", "高强度训练\n任务节奏更快\n注意力要求更高");
+            DifficultyCardView beginner = CreateDifficultyCard(difficultyContent.transform, selector, DifficultyLevel.Beginner, -340f, "Level 01", "轻度", "Beginner", "");
+            DifficultyCardView standard = CreateDifficultyCard(difficultyContent.transform, selector, DifficultyLevel.Standard, 0f, "Level 02", "标准", "Standard", "");
+            DifficultyCardView advanced = CreateDifficultyCard(difficultyContent.transform, selector, DifficultyLevel.Advanced, 340f, "Level 03", "挑战", "Advanced", "");
             selector.Configure(new[] { beginner, standard, advanced });
 
             Vector2 startPosition = new Vector2(0f, -356f);
@@ -738,7 +735,8 @@ namespace NeuroPilotXR.Editor
             CreateText(card.transform, "LevelText", levelText, 22f, new Vector2(250f, 38f), new Vector2(0f, 155f), new Color(0.72f, 0.8f, 0.9f, 0.85f), FontStyles.Normal);
             CreateText(card.transform, "ChineseName", chineseName, 48f, new Vector2(250f, 68f), new Vector2(0f, 91f), Color.white, FontStyles.Normal);
             CreateText(card.transform, "EnglishName", englishName, 24f, new Vector2(250f, 38f), new Vector2(0f, 46f), new Color(0.76f, 0.84f, 0.93f, 0.88f), FontStyles.Normal);
-            CreateText(card.transform, "Description", description, 23f, new Vector2(250f, 140f), new Vector2(0f, -58f), new Color(0.83f, 0.87f, 0.92f, 0.9f), FontStyles.Normal);
+            if (!string.IsNullOrEmpty(description))
+                CreateText(card.transform, "Description", description, 23f, new Vector2(250f, 140f), new Vector2(0f, -58f), new Color(0.83f, 0.87f, 0.92f, 0.9f), FontStyles.Normal);
             TMP_Text selected = CreateText(card.transform, "SelectedBadge", "已选择", 20f, new Vector2(180f, 34f), new Vector2(0f, -166f), new Color(0.84f, 0.92f, 1f, 1f), FontStyles.Normal);
 
             DifficultyCardView view = card.AddComponent<DifficultyCardView>();

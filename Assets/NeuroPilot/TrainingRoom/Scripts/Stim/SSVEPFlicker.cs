@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public class SSVEPFlicker : MonoBehaviour
 {
-    [SerializeField] private float _hz = 15f;
+    [SerializeField] private float _hz = 12f;
     [SerializeField, Range(0.05f, 0.95f)] private float _duty = 0.5f;
     [SerializeField] private Color _onColor = Color.white;
     [SerializeField] private Color _offColor = Color.black;

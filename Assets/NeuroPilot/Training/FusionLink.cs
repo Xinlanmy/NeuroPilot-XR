@@ -31,6 +31,13 @@ namespace NeuroPilotXR.Training
         /// <summary>下行命令分发事件（主线程）：type 为 command_* 之一，payload 为信封 payload 子对象（无 payload 时为顶层视图）。</summary>
         public event Action<string, FusionJson> CommandReceived;
 
+        /// <summary>下行 command_* 信封原文（主线程）：供自带信封校验的缝（v1.2.0 TryReceiveCommand）使用。
+        /// 只分发 command_ 前缀信封——ping 等心跳与非命令类型不进入，避免每秒心跳流经命令解析缝。</summary>
+        public event Action<string> CommandEnvelopeReceived;
+
+        /// <summary>每次新连接建立后触发（主线程续体）：适配器在此复位下行 seq 基线。</summary>
+        public event Action Connected;
+
         /// <summary>当前连接的 socket（仅状态查询；收发循环使用各自局部引用）。</summary>
         private ClientWebSocket _socket;
         private CancellationTokenSource _cts;
@@ -50,6 +57,7 @@ namespace NeuroPilotXR.Training
 
         /// <summary>Unix 毫秒时间戳（契约 t_ms 口径，与 Python 侧 recv_ts 对齐用）。</summary>
         public static long NowMs() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        public long NextSequence() => Interlocked.Increment(ref _sequence);
 
         /// <summary>地址覆盖优先级：Inspector 默认 &lt; PlayerPrefs（配置面板保存）&lt; 覆盖文件
         /// （persistentDataPath/fusion_url.txt，adb push 兜底——系统键盘不可用时仍能改地址）。</summary>
@@ -152,6 +160,7 @@ namespace NeuroPilotXR.Training
                     await socket.ConnectAsync(new Uri(serverUrl), roundCts.Token);
                     _warnedOffline = false;
                     Debug.Log($"[FusionLink] 已连接 {serverUrl}");
+                    Connected?.Invoke();
                     receive = ReceiveLoop(socket, roundCts.Token);
                     send = SendLoop(socket, roundCts.Token);
                     await Task.WhenAny(receive, send);
@@ -252,10 +261,14 @@ namespace NeuroPilotXR.Training
                         return;
                     }
 
-                    if (FusionJson.TryParseEnvelope(sb.ToString(), out string type, out FusionJson envelope) && type != "ping")
+                    if (FusionJson.TryParseEnvelope(sb.ToString(), out string type, out FusionJson envelope))
                     {
-                        FusionJson payload = envelope.Obj("payload") ?? envelope;
-                        CommandReceived?.Invoke(type, payload);
+                        if (type != "ping" && type.StartsWith("command_", StringComparison.Ordinal))
+                        {
+                            CommandEnvelopeReceived?.Invoke(sb.ToString());
+                            FusionJson payload = envelope.Obj("payload") ?? envelope;
+                            CommandReceived?.Invoke(type, payload);
+                        }
                     }
                 }
             }
@@ -338,7 +351,7 @@ namespace NeuroPilotXR.Training
         /// <summary>上行事件（payload 为 [Serializable] DTO，字段名与契约 snake_case 一致）。</summary>
         public void SendEvent(string type, object payload)
         {
-            long seq = Interlocked.Increment(ref _sequence);
+            long seq = NextSequence();
             string json = "{\"type\":\"" + type + "\",\"ts\":" + NowMs() + ",\"seq\":" + seq;
             if (payload != null)
             {
@@ -348,9 +361,15 @@ namespace NeuroPilotXR.Training
             Enqueue(json + "}");
         }
 
+        /// <summary>上行完整信封原文：缝自带 ts/seq 时使用（v1.2.0 TrainingEegPort / TargetPracticeSession）。</summary>
+        public void SendRaw(string json)
+        {
+            Enqueue(json);
+        }
+
         private void SendPing()
         {
-            long seq = Interlocked.Increment(ref _sequence);
+            long seq = NextSequence();
             Enqueue(string.Concat(
                 "{\"type\":\"ping\",\"ts\":", NowMs().ToString(),
                 ",\"seq\":", seq.ToString(), "}"));

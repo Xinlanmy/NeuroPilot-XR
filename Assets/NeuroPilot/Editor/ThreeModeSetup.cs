@@ -63,6 +63,54 @@ namespace NeuroPilotXR.Editor
                 EditorUtility.SetDirty(feature);
             }
             AssetDatabase.SaveAssets();
+            RemoveAuxiliaryCopy();
+        }
+
+        [MenuItem("NeuroPilot/UI/Remove Auxiliary Copy")]
+        public static void RemoveAuxiliaryCopy()
+        {
+            var navigation = EditorSceneManager.OpenScene(TrainingRoomIntegration.NavigationPath);
+            var panel = GameObject.Find("GlassNavigationPanel")?.transform;
+            if (panel == null) throw new InvalidOperationException("GlassNavigationPanel is missing.");
+            RemoveText(panel.Find("WelcomePage"), "BrandText", "Subtitle");
+            RemoveText(panel.Find("ModePage"), "Subtitle");
+            foreach (string card in new[] { "EyeModeButton", "SingleModeButton", "MultiModeButton" })
+                RemoveText(panel.Find("ModePage/" + card), "Summary", "Detail");
+            RemoveText(panel.Find("DifficultyPage/DifficultyContent"), "PageSubtitle");
+            foreach (string card in new[] { "BeginnerCard", "StandardCard", "AdvancedCard" })
+                RemoveText(panel.Find("DifficultyPage/DifficultyContent/" + card), "Description");
+            EditorSceneManager.SaveScene(navigation);
+
+            foreach (string path in new[] { TrainingRoomIntegration.ScenePath, EyePath, MultiPath })
+            {
+                var room = EditorSceneManager.OpenScene(path);
+                var hud = UnityEngine.Object.FindObjectsOfType<TrainingHUD>(true).SingleOrDefault();
+                if (hud == null) throw new InvalidOperationException("TrainingHUD is missing from " + path);
+                if (hud.modeText != null)
+                {
+                    hud.modeText.text = "";
+                    hud.modeText.gameObject.SetActive(false);
+                    EditorUtility.SetDirty(hud.modeText);
+                }
+                if (path == MultiPath && hud.hintText != null)
+                {
+                    hud.hintText.text = "";
+                    hud.hintText.gameObject.SetActive(false);
+                    EditorUtility.SetDirty(hud.hintText);
+                }
+                EditorSceneManager.SaveScene(room);
+            }
+
+            EditorSceneManager.OpenScene(TrainingRoomIntegration.NavigationPath);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void RemoveText(Transform parent, params string[] names)
+        {
+            if (parent == null) return;
+            foreach (var label in parent.GetComponentsInChildren<TMP_Text>(true)
+                         .Where(label => names.Contains(label.name)).ToArray())
+                UnityEngine.Object.DestroyImmediate(label.gameObject);
         }
 
         private static void PrepareNavigation()
@@ -73,10 +121,10 @@ namespace NeuroPilotXR.Editor
             // This builder owns only the new pages; preserve the hand-authored welcome/difficulty/drag UI.
             foreach (string name in new[] { "ModePage", "EyePage", "MultiPage", "SettingsPage" })
                 if (panel.Find(name) != null) UnityEngine.Object.DestroyImmediate(panel.Find(name).gameObject);
-            nav.modePage = Page(panel, "ModePage", "选择训练模式", "三个独立训练空间 · 按当前目标选择");
-            Card(nav.modePage.transform, "EyeModeButton", -340, "01 / EYE GAZE", "视线追踪", "视觉 · 多彩球消除", "多个彩球同时出现\n持续注视指定目标 5 秒\n不需要脑电确认", nav.ShowEye);
-            Card(nav.modePage.transform, "SingleModeButton", 0, "02 / SINGLE TARGET", "单球追踪", "脑电 · 单目标 SSVEP", "一个小球持续闪烁\n由脑电结果确认消除\n不依赖眼动或扳机", nav.ShowDifficulty);
-            Card(nav.modePage.transform, "MultiModeButton", 340, "03 / MULTI TARGET", "多球定位", "脑电 · 三目标 SSVEP", "三个小球不同频率同闪\n由脑电结果确认消除\n不依赖眼动或扳机", nav.ShowMulti);
+            nav.modePage = Page(panel, "ModePage", "选择训练模式", "");
+            Card(nav.modePage.transform, "EyeModeButton", -340, "01 / EYE GAZE", "视线追踪", "", "", nav.ShowEye);
+            Card(nav.modePage.transform, "SingleModeButton", 0, "02 / SINGLE TARGET", "单球追踪", "", "", nav.ShowDifficulty);
+            Card(nav.modePage.transform, "MultiModeButton", 340, "03 / MULTI TARGET", "多球定位", "", "", nav.ShowMulti);
             Button(nav.modePage.transform, "BackToWelcomeButton", "返回首页", new Vector2(-370, -355), new Vector2(260, 80), nav.ShowWelcome);
 
             nav.eyePage = Page(panel, "EyePage", "视线追踪", "先在头显设置中开启眼动并校准 · 无需扣动扳机");
@@ -114,7 +162,8 @@ namespace NeuroPilotXR.Editor
                 var rect = content.Find(name).GetComponent<RectTransform>();
                 rect.anchoredPosition = new Vector2(200, -356);
             }
-            content.Find("PageSubtitle").GetComponent<TMP_Text>().text = "单球脑电 SSVEP / 选择训练等级，不使用眼动确认";
+            if (content.Find("PageSubtitle") != null)
+                UnityEngine.Object.DestroyImmediate(content.Find("PageSubtitle").gameObject);
             nav.sceneTransition = UnityEngine.Object.FindObjectOfType<SceneTransitionManager>();
             nav.eyeStatus = nav.multiStatus = null; // Their page already explains readiness; room shows live countdown.
             SetListener(panel.Find("WelcomePage/EnterTrainingButton").GetComponent<Button>(), nav.ShowModes);
@@ -146,9 +195,10 @@ namespace NeuroPilotXR.Editor
             Button(page.transform, "IpBackspace", "退格", new Vector2(210, -216), new Vector2(190, 65), page.Backspace);
             Button(page.transform, "IpClear", "清空", new Vector2(435, -24), new Vector2(175, 70), page.Clear);
             Button(page.transform, "IpDefault", "默认地址", new Vector2(435, -120), new Vector2(175, 70), page.RestoreDefault);
-            Text(page.transform, "ConnectionNotice", "地址保存不代表已连接 · 脑电网络适配器尚待接入", new Vector2(0, -285), new Vector2(1080, 48), 23);
-            Button(page.transform, "BackFromSettingsButton", "返回首页", new Vector2(-320, -365), new Vector2(300, 80), nav.ShowWelcome);
-            Button(page.transform, "SaveIpButton", "保存地址", new Vector2(260, -365), new Vector2(360, 80), page.Save);
+            Text(page.transform, "ConnectionNotice", "地址保存不代表已连接 · 可先测试连接再保存", new Vector2(0, -285), new Vector2(1080, 48), 23);
+            Button(page.transform, "BackFromSettingsButton", "返回首页", new Vector2(-400, -365), new Vector2(300, 80), nav.ShowWelcome);
+            Button(page.transform, "TestConnButton", "测试连接", new Vector2(0, -365), new Vector2(360, 80), page.TestConnection);
+            Button(page.transform, "SaveIpButton", "保存地址", new Vector2(400, -365), new Vector2(360, 80), page.Save);
             nav.settingsPage.gameObject.SetActive(false);
         }
 
@@ -199,11 +249,14 @@ namespace NeuroPilotXR.Editor
                 Button(hud.transform, "ReturnToModesButton", "返回模式选择", new Vector2(-350, -490), new Vector2(360, 72), practice.ReturnToModes);
                 Button(hud.transform, "RestartPracticeButton", "重新训练", new Vector2(350, -490), new Vector2(320, 72), practice.Restart);
                 hud.accuracyText.transform.parent.Find("Caption").GetComponent<UnityEngine.UI.Text>().text = mode == TrainingMode.EyeTracking ? "注视占比" : "命中率";
-                hud.modeText.text = mode == TrainingMode.EyeTracking ? "视线追踪" : "多球定位";
+                hud.modeText.text = "";
+                hud.modeText.gameObject.SetActive(false);
             }
             practice.reward = AddReward(practice.gameObject);
             if (mode == TrainingMode.MultiTarget)
             {
+                if (practice.GetComponent<NeuroPilotXR.Training.FusionEegBridge>() == null)
+                    practice.gameObject.AddComponent<NeuroPilotXR.Training.FusionEegBridge>();
                 practice.director = practice.GetComponent<SsvepTargetGroup>() ?? practice.gameObject.AddComponent<SsvepTargetGroup>();
                 practice.director.config = frequencyPool;
                 practice.acceptExternalConfirm = true;
@@ -213,6 +266,8 @@ namespace NeuroPilotXR.Editor
                 practice.gaze = practice.gameObject.AddComponent<EyeGazeProvider>();
                 practice.gaze.origin = UnityEngine.Object.FindObjectOfType<XROrigin>();
             }
+            if (mode == TrainingMode.EyeTracking && practice.GetComponent<NeuroPilotXR.Training.FusionEegBridge>() != null)
+                UnityEngine.Object.DestroyImmediate(practice.GetComponent<NeuroPilotXR.Training.FusionEegBridge>());
             if (mode == TrainingMode.MultiTarget && practice.gaze != null)
             {
                 UnityEngine.Object.DestroyImmediate(practice.gaze);
@@ -231,7 +286,7 @@ namespace NeuroPilotXR.Editor
         {
             var rect = Rect(parent, name, Vector2.zero, new Vector2(1200, 900));
             Text(rect, "Title", title, new Vector2(0, 335), new Vector2(1040, 88), 60);
-            Text(rect, "Subtitle", subtitle, new Vector2(0, 265), new Vector2(1080, 60), 27);
+            if (!string.IsNullOrEmpty(subtitle)) Text(rect, "Subtitle", subtitle, new Vector2(0, 265), new Vector2(1080, 60), 27);
             return rect.gameObject.AddComponent<CanvasGroup>();
         }
         private static SuccessReward AddReward(GameObject host)
@@ -257,8 +312,8 @@ namespace NeuroPilotXR.Editor
             SetListener(b, action);
             Text(rect, "Index", index, new Vector2(0, 158), new Vector2(288, 40), 20);
             Text(rect, "Name", title, new Vector2(0, 85), new Vector2(290, 65), 45);
-            Text(rect, "Summary", subtitle, new Vector2(0, 20), new Vector2(285, 45), 25);
-            Text(rect, "Detail", detail, new Vector2(0, -89), new Vector2(285, 125), 23);
+            if (!string.IsNullOrEmpty(subtitle)) Text(rect, "Summary", subtitle, new Vector2(0, 20), new Vector2(285, 45), 25);
+            if (!string.IsNullOrEmpty(detail)) Text(rect, "Detail", detail, new Vector2(0, -89), new Vector2(285, 125), 23);
             Text(rect, "Open", "选择模式  >", new Vector2(0, -176), new Vector2(285, 40), 24);
         }
         private static RectTransform Rect(Transform parent, string name, Vector2 position, Vector2 size)
