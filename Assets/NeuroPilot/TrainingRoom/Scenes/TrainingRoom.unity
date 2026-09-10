@@ -1040,6 +1040,18 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RaycastTriggerInteraction: 1
+--- !u!114 &482150936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000722212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f4c2a91d7e34b58a0c9e12f83b7d604, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!1 &498304929
 GameObject:
   m_ObjectHideFlags: 0
@@ -1610,18 +1622,6 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: 9b894b1296ef2bc45bb8d0f50637eb19, type: 2}
   spawner: {fileID: 1584956940}
   hud: {fileID: 458251493}
---- !u!114 &482150936
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1000722212}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6f4c2a91d7e34b58a0c9e12f83b7d604, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!4 &1000722214
 Transform:
   m_ObjectHideFlags: 0
@@ -3548,7 +3548,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2069668462
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3601,7 +3601,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "TrainingRoom v1.2.0  \xB7  \u6807\u51C6  \xB7  \u8111\u7535\u786E\u8BA4\u5DF2\u6682\u505C"
+  m_Text:
 --- !u!222 &2069668464
 CanvasRenderer:
   m_ObjectHideFlags: 0

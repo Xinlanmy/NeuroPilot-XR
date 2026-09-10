@@ -37,15 +37,7 @@ public class TrainingHUD : MonoBehaviour
         if (accuracyText != null) accuracyText.text = "—";
         SetCountdown(Mathf.CeilToInt(session != null && session.config != null ? session.config.readyCountdown : 3));
         SetHint("面向前方靶区  ·  准备开始");
-        if (modeText != null)
-        {
-            var difficulty = NeuroPilotXR.Navigation.TrainingSession.SelectedDifficulty;
-            string label = difficulty == NeuroPilotXR.Navigation.DifficultyLevel.Beginner ? "轻度" :
-                difficulty == NeuroPilotXR.Navigation.DifficultyLevel.Advanced ? "挑战" : "标准";
-            modeText.text = "TrainingRoom v" + Application.version + "  ·  " + label + "  ·  " +
-                (session != null && session.EegPort != null && session.EegPort.eegInputEnabled
-                    ? "脑电 SSVEP · 接口待接入" : "脑电确认已暂停");
-        }
+        if (modeText != null) { modeText.text = ""; modeText.gameObject.SetActive(false); }
     }
 
     public void SetHint(string s)
@@ -106,7 +98,7 @@ public class TrainingHUD : MonoBehaviour
         if (timeText != null) timeText.gameObject.SetActive(visible);
         if (statText != null) statText.gameObject.SetActive(visible);
         if (hintText != null) hintText.gameObject.SetActive(visible);
-        if (modeText != null) modeText.gameObject.SetActive(visible);
+        if (modeText != null) modeText.gameObject.SetActive(false);
     }
 
     void Update()

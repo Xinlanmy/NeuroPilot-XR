@@ -13,8 +13,14 @@ namespace NeuroPilotXR.Navigation
         private string draft;
         private ConnectionTestDialog dialog;
         private bool testing;
+        private CancellationTokenSource probeCancellation;
 
         private void OnEnable() { draft = CommunicationSettings.Host; Refresh(); }
+        private void OnDisable()
+        {
+            probeCancellation?.Cancel();
+            if (dialog != null) dialog.Hide();
+        }
         public void Append(string value)
         {
             if (draft.Length + value.Length > 15) return;
@@ -62,10 +68,13 @@ namespace NeuroPilotXR.Navigation
             string message;
             Color color;
             var socket = new ClientWebSocket();
+            var lifetime = new CancellationTokenSource();
+            probeCancellation = lifetime;
             try
             {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4)))
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token))
                 {
+                    cts.CancelAfter(TimeSpan.FromSeconds(4));
                     await socket.ConnectAsync(new Uri(url), cts.Token);
                 }
 
@@ -73,8 +82,9 @@ namespace NeuroPilotXR.Navigation
                 color = new Color(.4f, .95f, .5f);
                 try
                 {
-                    using (var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                    using (var closeCts = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token))
                     {
+                        closeCts.CancelAfter(TimeSpan.FromSeconds(1));
                         await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "test-done", closeCts.Token);
                     }
                 }
@@ -82,6 +92,10 @@ namespace NeuroPilotXR.Navigation
                 {
                     try { socket.Abort(); } catch { /* 关闭阶段异常一律忽略 */ }
                 }
+            }
+            catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+            {
+                return;
             }
             catch (Exception ex)
             {
@@ -94,8 +108,11 @@ namespace NeuroPilotXR.Navigation
             {
                 socket.Dispose();
                 testing = false;
+                probeCancellation = null;
+                lifetime.Dispose();
             }
 
+            if (this == null || !isActiveAndEnabled || lifetime.IsCancellationRequested) return;
             Dialog().Show("连接测试", message, color);
             status.text = "当前已保存：" + CommunicationSettings.Host + "  ·  端口 " + CommunicationSettings.Port;
         }
@@ -113,7 +130,11 @@ namespace NeuroPilotXR.Navigation
 
         private ConnectionTestDialog Dialog()
         {
-            if (dialog == null) dialog = gameObject.AddComponent<ConnectionTestDialog>();
+            if (dialog == null)
+            {
+                dialog = gameObject.AddComponent<ConnectionTestDialog>();
+                dialog.Font = status != null ? status.font : address != null ? address.font : TMP_Settings.defaultFontAsset;
+            }
             return dialog;
         }
 
@@ -131,6 +152,7 @@ namespace NeuroPilotXR.Navigation
             private GameObject root;
             private TMP_Text titleText;
             private TMP_Text message;
+            public TMP_FontAsset Font { private get; set; }
 
             public void Show(string title, string content, Color color)
             {
@@ -168,12 +190,12 @@ namespace NeuroPilotXR.Navigation
                 btnRt.sizeDelta = new Vector2(220, 64);
                 btn.GetComponent<Image>().color = new Color(0.2f, 0.35f, 0.55f);
                 btn.GetComponent<Button>().onClick.AddListener(Hide);
-                CreateText(btn.transform, "Label", "确定", Vector2.zero, Vector2.zero, 34, Color.white);
+                CreateText(btn.transform, "Label", "确定", Vector2.zero, new Vector2(200, 56), 34, Color.white);
             }
 
-            private void Hide() { if (root != null) root.SetActive(false); }
+            public void Hide() { if (root != null) root.SetActive(false); }
 
-            private static TMP_Text CreateText(Transform parent, string name, string content, Vector2 pos, Vector2 size, float fontSize, Color color)
+            private TMP_Text CreateText(Transform parent, string name, string content, Vector2 pos, Vector2 size, float fontSize, Color color)
             {
                 var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
                 go.transform.SetParent(parent, false);
@@ -181,15 +203,16 @@ namespace NeuroPilotXR.Navigation
                 rt.anchoredPosition = pos;
                 rt.sizeDelta = size;
                 var tmp = go.GetComponent<TextMeshProUGUI>();
-                if (TMP_Settings.defaultFontAsset != null)
+                if (Font != null)
                 {
-                    tmp.font = TMP_Settings.defaultFontAsset;
+                    tmp.font = Font;
                 }
 
                 tmp.text = content;
                 tmp.fontSize = fontSize;
                 tmp.alignment = TextAlignmentOptions.Center;
                 tmp.color = color;
+                tmp.raycastTarget = false;
                 return tmp;
             }
         }

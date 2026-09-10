@@ -37,6 +37,7 @@ namespace NeuroPilotXR.Navigation
         public bool UsesGaze => mode == TrainingMode.EyeTracking;
         public IReadOnlyList<PracticeTarget> Targets => targets;
         public event Action<string> OutgoingEvent;
+        public Func<long> SequenceProvider { get; set; }
 
         [Serializable] private sealed class Envelope
         {
@@ -73,12 +74,17 @@ namespace NeuroPilotXR.Navigation
             view.resultPanel.SetActive(false);
             view.countdownRoot.SetActive(false);
             view.statText.text = "0"; view.timeText.text = "03:00"; view.accuracyText.text = "—";
-            view.modeText.text = UsesGaze ? "视线追踪 · 真实眼动 · 连续注视 1 秒" : "多球定位 · 3 球频率编码 · EEG 接口待接入";
+            view.modeText.text = "";
+            view.modeText.gameObject.SetActive(false);
             if (!UsesGaze) view.accuracyText.transform.parent.Find("Caption").GetComponent<Text>().text = "正在闪烁";
             if (ColorGaze)
             {
-                view.modeText.text = "视线追踪 · 彩球练习 · 真实眼动";
                 view.accuracyText.transform.parent.Find("Caption").GetComponent<Text>().text = "注视占比";
+            }
+            else
+            {
+                view.hintText.text = "";
+                view.hintText.gameObject.SetActive(false);
             }
             while (!entry.IsReady) { view.hintText.text = "正在定位白色训练房间…"; yield return null; }
             started = true;
@@ -156,10 +162,6 @@ namespace NeuroPilotXR.Navigation
                 TickGaze(valid, ray, Mathf.Min(Time.deltaTime, .1f));
                 view.hintText.text = !valid ? "眼动暂不可用 · 已暂停计时，请检查佩戴或重新校准" :
                     (ColorGaze ? "请持续观察蓝色目标 5 秒  " : "持续注视小球 1 秒  ") + Mathf.RoundToInt(DwellProgress * 100f) + "%";
-            }
-            else
-            {
-                view.hintText.text = "三个目标同时以不同频率闪烁 · 等待脑电确认，不使用眼动判定";
             }
             RefreshStats();
         }
@@ -263,7 +265,7 @@ namespace NeuroPilotXR.Navigation
             if (string.IsNullOrEmpty(target.Id)) return;
             string wireType = !UsesGaze && type == "target_confirmed" ? "scene_event" : type;
             string json = JsonUtility.ToJson(new Envelope { type = wireType,
-                ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), seq = eventSequence++, payload = new Payload { mode = mode.ToString(),
+                ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), seq = SequenceProvider != null ? SequenceProvider() : eventSequence++, payload = new Payload { mode = mode.ToString(),
                 target_id = target.Id, slot = target.Slot, position = target.transform.position,
                 freq_hz = target.Frequency, kind = type == "target_confirmed" ? "target_confirmed" : null } });
             if (OutgoingEvent == null) return;

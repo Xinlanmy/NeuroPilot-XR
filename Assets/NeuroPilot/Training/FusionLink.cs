@@ -57,6 +57,7 @@ namespace NeuroPilotXR.Training
 
         /// <summary>Unix 毫秒时间戳（契约 t_ms 口径，与 Python 侧 recv_ts 对齐用）。</summary>
         public static long NowMs() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        public long NextSequence() => Interlocked.Increment(ref _sequence);
 
         /// <summary>地址覆盖优先级：Inspector 默认 &lt; PlayerPrefs（配置面板保存）&lt; 覆盖文件
         /// （persistentDataPath/fusion_url.txt，adb push 兜底——系统键盘不可用时仍能改地址）。</summary>
@@ -350,7 +351,7 @@ namespace NeuroPilotXR.Training
         /// <summary>上行事件（payload 为 [Serializable] DTO，字段名与契约 snake_case 一致）。</summary>
         public void SendEvent(string type, object payload)
         {
-            long seq = Interlocked.Increment(ref _sequence);
+            long seq = NextSequence();
             string json = "{\"type\":\"" + type + "\",\"ts\":" + NowMs() + ",\"seq\":" + seq;
             if (payload != null)
             {
@@ -368,7 +369,7 @@ namespace NeuroPilotXR.Training
 
         private void SendPing()
         {
-            long seq = Interlocked.Increment(ref _sequence);
+            long seq = NextSequence();
             Enqueue(string.Concat(
                 "{\"type\":\"ping\",\"ts\":", NowMs().ToString(),
                 ",\"seq\":", seq.ToString(), "}"));

@@ -801,7 +801,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &292637394
 RectTransform:
   m_ObjectHideFlags: 0
@@ -854,7 +854,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\u9762\u5411\u524D\u65B9\u9776\u533A  \xB7  \u51C6\u5907\u5F00\u59CB"
+  m_Text:
 --- !u!222 &292637396
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1475,6 +1475,18 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RaycastTriggerInteraction: 1
+--- !u!114 &482150936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000722212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f4c2a91d7e34b58a0c9e12f83b7d604, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!1 &498304929
 GameObject:
   m_ObjectHideFlags: 0
@@ -2082,18 +2094,6 @@ MonoBehaviour:
   duration: 180
   dwellSeconds: 1
   acceptExternalConfirm: 1
---- !u!114 &482150936
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1000722212}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6f4c2a91d7e34b58a0c9e12f83b7d604, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1000722217
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3689,7 +3689,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2069668462
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3742,7 +3742,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\u591A\u7403\u5B9A\u4F4D"
+  m_Text:
 --- !u!222 &2069668464
 CanvasRenderer:
   m_ObjectHideFlags: 0

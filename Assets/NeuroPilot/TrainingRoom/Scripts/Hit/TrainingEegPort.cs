@@ -16,6 +16,9 @@ public sealed class TrainingEegPort : MonoBehaviour
     public bool eegInputEnabled = true;
 
     public event Action<string> OutgoingMessage;
+    // Optional adapter clock: share one sequence with transport heartbeats.
+    // Local-only consumers retain the standalone counter.
+    public Func<long> SequenceProvider { get; set; }
     public string CurrentTargetId { get; private set; }
     public const float HeartbeatIntervalSeconds = 1f;
     public const float HeartbeatTimeoutSeconds = 3f;
@@ -65,7 +68,7 @@ public sealed class TrainingEegPort : MonoBehaviour
 
     private void Emit(string type, Payload payload)
     {
-        var message = new Envelope { type = type, ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), seq = outgoingSeq++, payload = payload };
+        var message = new Envelope { type = type, ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), seq = SequenceProvider != null ? SequenceProvider() : outgoingSeq++, payload = payload };
         var listeners = OutgoingMessage;
         if (listeners == null) return;
         string json = JsonUtility.ToJson(message);

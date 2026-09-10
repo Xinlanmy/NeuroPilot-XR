@@ -22,8 +22,8 @@ namespace NeuroPilotXR.Editor
         public const string NavigationPath = "Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity";
         private const string Root = "Assets/NeuroPilot/TrainingRoom";
         private const string RigPath = "Assets/Samples/XR Interaction Toolkit/2.5.4/Starter Assets/Prefabs/XR Interaction Setup.prefab";
-        public const string Version = "1.2.0";
-        private const string ApkPath = "Builds/Android/NeuroPilotXR_" + Version + "_TrainingRoom.apk";
+        public const string Version = "2.0";
+        private const string ApkPath = "Builds/Android/NeuroPilotXR_2.0.apk";
 
         [MenuItem("NeuroPilot/Training Room/Integrate Imported Scene")]
         public static void Prepare()
@@ -95,6 +95,8 @@ namespace NeuroPilotXR.Editor
             if (session == null || spawner == null || hud == null) throw new InvalidOperationException("Imported training dependencies missing.");
             spawner.viewCamera = camera;
             if (session.GetComponent<TrainingEegPort>() == null) session.gameObject.AddComponent<TrainingEegPort>();
+            if (session.GetComponent<NeuroPilotXR.Training.FusionEegBridge>() == null)
+                session.gameObject.AddComponent<NeuroPilotXR.Training.FusionEegBridge>();
             var entry = session.GetComponent<TrainingRoomEntry>();
             if (entry == null) entry = session.gameObject.AddComponent<TrainingRoomEntry>();
             entry.origin = rig; entry.session = session; entry.hud = hud.transform;
@@ -128,12 +130,12 @@ namespace NeuroPilotXR.Editor
             serialized.FindProperty("trainingSceneName").stringValue = "TrainingRoom";
             serialized.ApplyModifiedPropertiesWithoutUndo();
             var brand = UnityEngine.Object.FindObjectsOfType<TMP_Text>(true).FirstOrDefault(text => text.name == "BrandText");
-            if (brand != null) brand.text = "NEUROPILOT XR  ·  v" + Version + " TRAININGROOM";
+            if (brand != null) { brand.text = ""; brand.gameObject.SetActive(false); }
             EditorSceneManager.SaveScene(scene);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(NavigationPath, true), new EditorBuildSettingsScene(ScenePath, true) };
             PlayerSettings.productName = "NeuroPilot XR " + Version;
             PlayerSettings.bundleVersion = Version;
-            PlayerSettings.Android.bundleVersionCode = 6;
+            PlayerSettings.Android.bundleVersionCode = 7;
             AssetDatabase.SaveAssets();
             // Remove only obsolete adapter-generated helper materials; prefab shader references are restored above.
             AssetDatabase.DeleteAsset(Root + "/Materials/TrainingRoom_TunnelingVignette.mat");
@@ -165,15 +167,24 @@ namespace NeuroPilotXR.Editor
 
         public static void BuildAndroid()
         {
+            ThreeModeSetup.RemoveAuxiliaryCopy();
+            ViveFocusVisionConfigurator.ApplyProjectProfile();
+            ViveFocusVisionConfigurator.ValidateProject();
+            PlayerSettings.productName = "NeuroPilot XR " + Version;
+            PlayerSettings.bundleVersion = Version;
+            PlayerSettings.Android.bundleVersionCode = 7;
             Directory.CreateDirectory("Builds/Android");
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = ThreeModeSetup.ScenePaths,
                 locationPathName = ApkPath,
                 target = BuildTarget.Android,
-                options = BuildOptions.Development | BuildOptions.DetailedBuildReport
+                options = BuildOptions.DetailedBuildReport
             });
             Debug.Log("[TrainingRoomIntegration] BUILD " + report.summary.result + " errors=" + report.summary.totalErrors);
+            File.WriteAllText("Builds/Android/NeuroPilotXR_2.0-build-report.txt",
+                $"Result: {report.summary.result}\nErrors: {report.summary.totalErrors}\nWarnings: {report.summary.totalWarnings}\n" +
+                $"Bytes: {report.summary.totalSize}\nDuration: {report.summary.totalTime}\nScenes:\n" + string.Join("\n", ThreeModeSetup.ScenePaths));
             if (report.summary.result != BuildResult.Succeeded) throw new InvalidOperationException("Android build failed.");
         }
     }

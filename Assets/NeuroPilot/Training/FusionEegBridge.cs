@@ -18,6 +18,7 @@ namespace NeuroPilotXR.Training
         private TargetPracticeSession _multi;
         private float _offlineSince = -1f;
         private bool _warnedOffline;
+        private Func<long> _nextSequence;
 
         private void Awake()
         {
@@ -34,14 +35,23 @@ namespace NeuroPilotXR.Training
             // 返回本行赋值，Endpoint 胜出；FusionLink.Start(autoConnect) 在所有 Awake 之后
             // 才发起首连。Update 的比较仅作设置页改址后的免重启同步兜底。
             _link.ServerUrl = NeuroPilotXR.Navigation.CommunicationSettings.Endpoint;
+            _nextSequence = _link.NextSequence;
         }
 
         private void OnEnable()
         {
             _link.Connected += OnConnected;
             _link.CommandEnvelopeReceived += OnRawMessage;
-            if (_single != null) _single.OutgoingMessage += _link.SendRaw;
-            if (_multi != null) _multi.OutgoingEvent += _link.SendRaw;
+            if (_single != null)
+            {
+                _single.SequenceProvider = _nextSequence;
+                _single.OutgoingMessage += _link.SendRaw;
+            }
+            if (_multi != null)
+            {
+                _multi.SequenceProvider = _nextSequence;
+                _multi.OutgoingEvent += _link.SendRaw;
+            }
             if (_link.IsConnected)
             {
                 OnConnected();
@@ -52,8 +62,16 @@ namespace NeuroPilotXR.Training
         {
             _link.Connected -= OnConnected;
             _link.CommandEnvelopeReceived -= OnRawMessage;
-            if (_single != null) _single.OutgoingMessage -= _link.SendRaw;
-            if (_multi != null) _multi.OutgoingEvent -= _link.SendRaw;
+            if (_single != null)
+            {
+                _single.OutgoingMessage -= _link.SendRaw;
+                if (_single.SequenceProvider == _nextSequence) _single.SequenceProvider = null;
+            }
+            if (_multi != null)
+            {
+                _multi.OutgoingEvent -= _link.SendRaw;
+                if (_multi.SequenceProvider == _nextSequence) _multi.SequenceProvider = null;
+            }
         }
 
         private void OnConnected()
