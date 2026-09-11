@@ -26,7 +26,16 @@ namespace NeuroPilotXR.Navigation
         public int serverPort => CommunicationSettings.Port;
         private bool leaving;
         public float duration = 180f;
-        public float dwellSeconds = 1f;
+        public float dwellSeconds = 5f;
+        // Real eye trackers jitter by 1-2 degrees and drop out for a few frames on every blink, so a
+        // fixation window that resets on a single bad sample is unreachable on hardware. Off-target
+        // time first spends a small grace budget, then drains the accumulated dwell.
+        public float dwellGraceSeconds = 0.3f;
+        public float offTargetDecayPerSecond = 2f;
+        // Ball size and distance set the fixation difficulty: 0.5 m at 3.6 m is about 8 degrees of
+        // visual angle, roughly twice the original 0.32 m at 4.7 m, which was smaller than the jitter.
+        public float eyeTargetDiameter = 0.5f;
+        public float eyeTargetDepth = 3.6f;
         public bool acceptExternalConfirm; // Reserved adapter; no network connection or EEG classifier.
         public int Hits { get; private set; }
         public int Misses { get; private set; }
@@ -55,8 +64,9 @@ namespace NeuroPilotXR.Navigation
         }
 
         private readonly List<PracticeTarget> targets = new List<PracticeTarget>();
-        private float dwell, validEyeTime, onTargetTime;
+        private float dwell, graceLeft, validEyeTime, onTargetTime;
         private bool hasEyeSample, focused = true, started, finished;
+        private float focusLostAt;
         private long eventSequence, externalSequence = -1;
         private int mainThread;
         private readonly Color cyan = new Color(0.04f, 0.8f, 0.95f);
@@ -67,7 +77,13 @@ namespace NeuroPilotXR.Navigation
         {
             mainThread = System.Threading.Thread.CurrentThread.ManagedThreadId;
             ColorGaze = mode == TrainingMode.EyeTracking;
-            dwellSeconds = 5f;
+            // Authored in the scene, clamped but never overwritten: the previous hard-coded 5 here is
+            // why every dwellSeconds value set in a scene was ignored.
+            dwellSeconds = Mathf.Max(0.2f, dwellSeconds);
+            dwellGraceSeconds = Mathf.Max(0f, dwellGraceSeconds);
+            offTargetDecayPerSecond = Mathf.Max(0f, offTargetDecayPerSecond);
+            eyeTargetDiameter = Mathf.Clamp(eyeTargetDiameter, 0.1f, 1f);
+            eyeTargetDepth = Mathf.Max(0.55f, eyeTargetDepth);
             view.enabled = false;
             view.session = null;
             if (director != null) director.EpisodeChanged += OnEpisode;
@@ -96,7 +112,7 @@ namespace NeuroPilotXR.Navigation
             ClearTargets();
             var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
             if (telemetry != null) telemetry.HideProfile();
-            Hits = Misses = 0; dwell = validEyeTime = onTargetTime = 0f;
+            Hits = Misses = 0; dwell = graceLeft = validEyeTime = onTargetTime = 0f;
             Remaining = duration; finished = false; Running = false;
             if (restartButton != null) restartButton.interactable = false;
             view.resultPanel.SetActive(false); view.statsRoot.SetActive(true); view.footerRoot.SetActive(true);
@@ -112,19 +128,22 @@ namespace NeuroPilotXR.Navigation
                 view.hintText.text = "频率池尚未配置或无效：已禁止闪烁，请返回检查配置";
                 yield break;
             }
-            while (!focused || (UsesGaze && !gaze.TryGetRay(out _)))
+            while (!focused || (UsesGaze && (gaze == null || !gaze.TryGetRay(out _))))
             {
-                view.hintText.text = "未获取有效眼动：请在头显设置中开启眼动并完成校准";
+                // Ship the runtime readout with the failure: on device this is the only way to tell a
+                // missing extension apart from a calibration problem.
+                view.hintText.text = "未获取有效眼动：请在头显设置中开启眼动并完成校准" + GazeDiagnostic();
                 yield return null;
             }
             view.countdownRoot.SetActive(true);
             float ready = 3f;
             while (ready > 0f)
             {
-                bool valid = focused && (!UsesGaze || gaze.TryGetRay(out _));
+                bool valid = focused && (!UsesGaze || (gaze != null && gaze.TryGetRay(out _)));
                 view.countdownText.text = valid ? Mathf.CeilToInt(ready).ToString() : "暂停";
                 view.countdownText.fontSize = valid ? 104 : 60;
-                view.hintText.text = valid ? "小球将在入场时的身前区域出现" : "等待有效眼动数据，倒计时暂停";
+                view.hintText.text = valid ? "小球将在入场时的身前区域出现" :
+                    "等待有效眼动数据，倒计时暂停" + GazeDiagnostic();
                 if (valid) ready -= Time.deltaTime;
                 yield return null;
             }
@@ -135,7 +154,7 @@ namespace NeuroPilotXR.Navigation
                 var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 ball.name = "Practice Target " + (i + 1);
                 ball.transform.SetParent(transform, true);
-                ball.transform.localScale = Vector3.one * 0.32f;
+                ball.transform.localScale = Vector3.one * (UsesGaze ? eyeTargetDiameter : 0.32f);
                 var target = ball.AddComponent<PracticeTarget>();
                 target.Slot = i + 1; target.ColorIndex = i; target.Surface = ball.GetComponent<Renderer>();
                 target.Surface.sharedMaterial = targetMaterial;
@@ -152,18 +171,27 @@ namespace NeuroPilotXR.Navigation
             if (!started) return;
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) ReturnToModes();
             if (!Running) return;
-            if (!focused) { dwell = 0f; return; }
-            hasEyeSample = !UsesGaze || gaze.TryGetRay(out _);
+            if (!focused)
+            {
+                // Losing focus (headset off, another app in front) is just another gap in the data:
+                // grace first, drain after, instead of an instant reset.
+                DrainOffTarget(Mathf.Min(Time.deltaTime, .1f));
+                return;
+            }
+            hasEyeSample = !UsesGaze || (gaze != null && gaze.TryGetRay(out _));
             if (hasEyeSample) Remaining = Mathf.Max(0f, Remaining - Time.deltaTime);
             if (Remaining <= 0f) { Finish(); return; }
             foreach (var target in targets)
                 if (target.FeedbackUntil > 0f && Time.time >= target.FeedbackUntil) Place(target);
             if (UsesGaze)
             {
-                bool valid = gaze.TryGetRay(out Ray ray);
+                Ray ray = default;
+                bool valid = gaze != null && gaze.TryGetRay(out ray);
                 TickGaze(valid, ray, Mathf.Min(Time.deltaTime, .1f));
-                view.hintText.text = !valid ? "眼动暂不可用 · 已暂停计时，请检查佩戴或重新校准" :
-                    (ColorGaze ? "请持续观察蓝色目标 5 秒  " : "持续注视小球 1 秒  ") + Mathf.RoundToInt(DwellProgress * 100f) + "%";
+                view.hintText.text = !valid
+                    ? "眼动暂不可用 · 已暂停计时，请检查佩戴或重新校准" + GazeDiagnostic()
+                    : (ColorGaze ? "请持续观察蓝色目标 " : "持续注视小球 ") + Mathf.RoundToInt(dwellSeconds) + " 秒  " +
+                      Mathf.RoundToInt(DwellProgress * 100f) + "%";
             }
             RefreshStats();
         }
@@ -171,19 +199,34 @@ namespace NeuroPilotXR.Navigation
         private void TickGaze(bool valid, Ray ray, float delta)
         {
             if (!Running || !UsesGaze) return;
-            if (!valid) { dwell = 0f; return; }
-            validEyeTime += delta;
-            PracticeTarget target = Resolve(ray);
-            if (target == null || !target.Available || (ColorGaze && target.ColorIndex != 0))
+            PracticeTarget target = valid ? Resolve(ray) : null;
+            bool onTarget = target != null && target.Available && (!ColorGaze || target.ColorIndex == 0);
+            if (valid) validEyeTime += delta;
+            if (onTarget)
             {
-                dwell = 0f;
-                foreach (var item in targets) if (item.Available) item.Surface.material.color = BaseColor(item);
+                graceLeft = dwellGraceSeconds; // Locked on: refill the forgiveness budget.
+                onTargetTime += delta;
+                dwell += delta;
+                target.Surface.material.color = Color.Lerp(BaseColor(target), Color.white, DwellProgress * .25f);
+                if (dwell >= dwellSeconds) Hit(target);
                 return;
             }
-            onTargetTime += delta;
-            dwell += delta;
-            target.Surface.material.color = Color.Lerp(BaseColor(target), Color.white, DwellProgress * .25f);
-            if (dwell >= dwellSeconds) Hit(target);
+            DrainOffTarget(delta);
+            foreach (var item in targets) if (item.Available) item.Surface.material.color = BaseColor(item);
+        }
+
+        /// <summary>Spends the grace budget first, then removes accumulated dwell.</summary>
+        private void DrainOffTarget(float delta)
+        {
+            float forgiven = Mathf.Min(graceLeft, delta);
+            graceLeft -= forgiven;
+            float drain = delta - forgiven;
+            if (drain > 0f) dwell = Mathf.Max(0f, dwell - drain * offTargetDecayPerSecond);
+        }
+
+        private string GazeDiagnostic()
+        {
+            return UsesGaze && gaze != null ? "\n" + gaze.Diagnostic : string.Empty;
         }
 
         private PracticeTarget Resolve(Ray ray)
@@ -200,7 +243,7 @@ namespace NeuroPilotXR.Navigation
             Emit("target_confirmed", target);
             if (UsesGaze) Emit("target_offset", target); else director.Stop(target);
             target.Id = null;
-            Hits++; dwell = 0f;
+            Hits++; dwell = 0f; graceLeft = 0f;
             if (reward != null) reward.Play(target.transform.position);
             target.Surface.enabled = false;
             target.GetComponent<Collider>().enabled = false;
@@ -226,7 +269,7 @@ namespace NeuroPilotXR.Navigation
                     new Vector2(-.85f, -.3f), new Vector2(.85f, -.3f), new Vector2(0f, .55f) };
                 if (!UsesGaze) slots = new[] { new Vector2(-1.35f, .5f), new Vector2(1.35f, .5f), new Vector2(0, -.25f) };
                 best = entry.TrainingOrigin + new Vector3(slots[slot].x + UnityEngine.Random.Range(-.12f, .12f),
-                    slots[slot].y + UnityEngine.Random.Range(-.04f, .04f), !UsesGaze ? 4.1f : 4.7f);
+                    slots[slot].y + UnityEngine.Random.Range(-.04f, .04f), !UsesGaze ? 4.1f : eyeTargetDepth);
                 best.y = Mathf.Clamp(best.y, 0.7f, 2.8f);
                 found = true;
             }
@@ -289,7 +332,7 @@ namespace NeuroPilotXR.Navigation
             Running = false; finished = true; ClearTargets(); RefreshStats();
             var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
             if (telemetry != null) telemetry.ShowSessionResult(Hits, Misses,
-                Hits + Misses > 0 ? 100f * Hits / (Hits + Misses) : 0f, 0f);
+                Hits + Misses > 0 ? 100f * Hits / (Hits + Misses) : 0f, float.NaN);
             if (restartButton != null) restartButton.interactable = true;
             view.resultPanel.SetActive(true); view.countdownRoot.SetActive(false);
             view.statsRoot.SetActive(false); view.footerRoot.SetActive(false);
@@ -322,8 +365,18 @@ namespace NeuroPilotXR.Navigation
         private void OnApplicationFocus(bool value)
         {
             focused = value;
-            if (!value) { dwell = 0f; if (director != null) director.StopAll(); }
-            else if (Running && director != null) foreach (var target in targets) director.Begin(target);
+            if (!value)
+            {
+                focusLostAt = Time.unscaledTime;
+                if (director != null) director.StopAll();
+            }
+            else
+            {
+                // A pause long enough that Update stopped advancing is a real interruption and clears
+                // the fixation; anything shorter is absorbed by the ordinary grace budget.
+                if (Time.unscaledTime - focusLostAt > 0.5f) { dwell = 0f; graceLeft = 0f; }
+                if (Running && director != null) foreach (var target in targets) director.Begin(target);
+            }
         }
         private Color BaseColor(PracticeTarget target) => ColorGaze ? palette[target.ColorIndex] : UsesGaze ? cyan : new Color(.35f, .4f, .45f);
         private void OnDisable() { Running = false; StopAllCoroutines(); ClearTargets(); }

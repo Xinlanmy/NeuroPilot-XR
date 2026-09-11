@@ -33,6 +33,10 @@ namespace NeuroPilotXR.Editor
             var footer = Panel("TrainingFooter", canvas, new Vector2(0, -375), new Vector2(1160, 132), Ink);
             hud.footerRoot = footer.gameObject;
             hud.hintText = Reuse(hud.hintText, "HintText", footer, new Vector2(0, 24), new Vector2(1100, 48), 30, Color.white);
+            // The hint carries a second, diagnostic line whenever eye data is missing. The box is one
+            // line tall by design, so overflow is the only thing keeping that line from being dropped
+            // in silence; Reuse leaves the mode at Truncate.
+            hud.hintText.verticalOverflow = VerticalWrapMode.Overflow;
             hud.modeText = Reuse(hud.modeText, "ModeText", footer, new Vector2(0, -29), new Vector2(1100, 40), 24, Muted);
 
             var countdown = Panel("ReadyCard", canvas, Vector2.zero, new Vector2(260, 240), Ink);

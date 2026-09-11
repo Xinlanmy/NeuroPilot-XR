@@ -172,10 +172,10 @@ public class SessionManager : MonoBehaviour
             case State.GameOver:
                 _restartHeld = true;
                 if (spawner != null) spawner.DespawnCurrent();
+                float rate = (HitCount + MissCount) > 0 ? (float)HitCount / (HitCount + MissCount) * 100f : 0f;
+                float avgRt = _reactionSamples > 0 ? _totalReaction / _reactionSamples : 0f;
                 if (hud != null)
                 {
-                    float rate = (HitCount + MissCount) > 0 ? (float)HitCount / (HitCount + MissCount) * 100f : 0f;
-                    float avgRt = _reactionSamples > 0 ? _totalReaction / _reactionSamples : 0f;
                     hud.ShowResult(HitCount, MissCount, rate, avgRt);
                 }
                 var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();

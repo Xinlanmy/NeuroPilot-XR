@@ -22,6 +22,10 @@ namespace NeuroPilotXR.Training
         private double attentionSum;
         private double fatigueDuration;
 
+        public float AttentionScore => attentionScore;
+        public bool IsProfileVisible => profileText != null && profileText.gameObject.activeSelf;
+        public bool IsLiveTelemetryVisible => attentionText != null && attentionText.gameObject.activeSelf;
+
         private void Awake()
         {
             Build();
@@ -38,8 +42,8 @@ namespace NeuroPilotXR.Training
         public void SetAttention(FusionJson payload)
         {
             if (payload == null) return;
-            attentionScore = (float)payload.Num("score", attentionScore);
-            quality = (float)payload.Num("quality", quality);
+            attentionScore = Read01(payload, "score", attentionScore);
+            quality = Read01(payload, "quality", quality);
             double valid = payload.Num("valid", 0.0);
             if (valid > 0.5)
             {
@@ -52,7 +56,7 @@ namespace NeuroPilotXR.Training
         public void SetFatigue(FusionJson payload)
         {
             if (payload == null) return;
-            fatigueScore = (float)payload.Num("score", fatigueScore);
+            fatigueScore = Read01(payload, "score", fatigueScore);
             state = payload.Str("state", state);
             fatigueDuration = payload.Num("low_duration_s", fatigueDuration);
             fatigueText.text = string.Format("疲劳值  {0:0.00}   {1}", fatigueScore, state);
@@ -77,12 +81,19 @@ namespace NeuroPilotXR.Training
         public void HideProfile()
         {
             if (profileText != null) profileText.gameObject.SetActive(false);
+            if (attentionText != null) attentionText.gameObject.SetActive(true);
+            if (fatigueText != null) fatigueText.gameObject.SetActive(true);
+            validSamples = 0;
+            attentionSum = 0.0;
+            fatigueDuration = 0.0;
         }
 
         private void ShowProfile(double hits, double misses, double hitRate, double avgReaction,
             double attentionMean, double fatigueSeconds)
         {
             if (profileText == null) return;
+            attentionText.gameObject.SetActive(false);
+            fatigueText.gameObject.SetActive(false);
             profileText.gameObject.SetActive(true);
             profileText.text =
                 "<size=32><color=#8DA9BA>认知画像</color></size>\n\n" +
@@ -90,8 +101,16 @@ namespace NeuroPilotXR.Training
                 (double.IsNaN(hitRate) ? "" : $"命中率  {hitRate:0.0}%\n") +
                 (double.IsNaN(avgReaction) ? "" : $"平均反应时  {avgReaction:0.00} s\n") +
                 (double.IsNaN(attentionMean) ? "" : $"平均注意力  {attentionMean:0.00}\n") +
-                $"疲劳累计  {fatigueSeconds:0.0} s\n" +
+                (double.IsNaN(fatigueSeconds) ? "" : $"低注意持续  {fatigueSeconds:0.0} s\n") +
                 $"结束状态  {state}";
+        }
+
+        private static float Read01(FusionJson payload, string key, float fallback)
+        {
+            double value = payload.Num(key, fallback);
+            return double.IsNaN(value) || double.IsInfinity(value)
+                ? fallback
+                : Mathf.Clamp01((float)value);
         }
 
         private void Build()
