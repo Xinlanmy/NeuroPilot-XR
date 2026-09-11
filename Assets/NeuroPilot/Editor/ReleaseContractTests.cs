@@ -20,10 +20,30 @@ namespace NeuroPilotXR.Editor
         {
             ViveFocusVisionConfigurator.ApplyProjectProfile();
             Assert.DoesNotThrow(ViveFocusVisionConfigurator.ValidateProject);
-            Assert.AreEqual(7, PlayerSettings.Android.bundleVersionCode);
-            Assert.AreEqual("2.0", PlayerSettings.bundleVersion);
-            Assert.AreEqual("NeuroPilot XR 2.0", PlayerSettings.productName);
+            Assert.AreEqual(8, PlayerSettings.Android.bundleVersionCode);
+            Assert.AreEqual("2.0.1", PlayerSettings.bundleVersion);
+            Assert.AreEqual("NeuroPilot XR 2.0.1", PlayerSettings.productName);
             Assert.AreEqual("com.neuropilot.xr", PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android));
+        }
+
+        [Test]
+        public void DragFacingRotationKeepsCanvasUprightAndFacingViewer()
+        {
+            Vector3 viewer = new Vector3(-1.5f, 1.7f, -2f);
+            Vector3 window = new Vector3(2f, 0.8f, 3f);
+            Assert.IsTrue(SpatialWindowDragController.TryCalculateFacingRotation(window, viewer, out Quaternion rotation));
+
+            Vector3 expectedForward = Vector3.ProjectOnPlane(window - viewer, Vector3.up).normalized;
+            Assert.Greater(Vector3.Dot(rotation * Vector3.forward, expectedForward), 0.9999f);
+            Assert.Greater(Vector3.Dot(rotation * Vector3.up, Vector3.up), 0.9999f);
+            Assert.Greater(Vector3.Dot(-(rotation * Vector3.forward), (viewer - window).normalized), 0.98f);
+        }
+
+        [Test]
+        public void DragFacingRotationRejectsUndefinedHorizontalDirection()
+        {
+            Assert.IsFalse(SpatialWindowDragController.TryCalculateFacingRotation(
+                new Vector3(1f, 3f, 2f), new Vector3(1f, 1f, 2f), out _));
         }
 
         [Test]

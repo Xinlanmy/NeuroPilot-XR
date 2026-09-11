@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -16,6 +17,8 @@ namespace NeuroPilotXR.Editor
     public static class SpatialWindowInteractionVerification
     {
         private const string Layout = "NeuroPilotVerificationController";
+        private const string BatchSessionKey = "NeuroPilot.SpatialWindowVerification.Batch";
+        private const string NavigationScenePath = "Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity";
         private static readonly List<InputDevice> Devices = new List<InputDevice>();
         private static readonly List<string> Results = new List<string>();
         private static IEnumerator<int> routine;
@@ -28,6 +31,49 @@ namespace NeuroPilotXR.Editor
         private static string status = "Not run";
 
         public static string Status() => status;
+
+        /// <summary>Command-line entry point that opens the navigation scene and exits after verification.</summary>
+        public static void RunBatch()
+        {
+            SessionState.SetBool(BatchSessionKey, true);
+            EditorSceneManager.OpenScene(NavigationScenePath, OpenSceneMode.Single);
+            EditorApplication.EnterPlaymode();
+        }
+
+        [InitializeOnLoadMethod]
+        private static void ResumeBatchRunAfterDomainReload()
+        {
+            if (!SessionState.GetBool(BatchSessionKey, false))
+                return;
+
+            EditorApplication.delayCall += StartOrMonitorBatchRun;
+        }
+
+        private static void StartOrMonitorBatchRun()
+        {
+            if (!SessionState.GetBool(BatchSessionKey, false))
+                return;
+            if (!EditorApplication.isPlaying)
+            {
+                EditorApplication.delayCall += StartOrMonitorBatchRun;
+                return;
+            }
+
+            Begin();
+            EditorApplication.update += MonitorBatchRun;
+        }
+
+        private static void MonitorBatchRun()
+        {
+            if (status.StartsWith("RUNNING", StringComparison.Ordinal) || status == "Not run")
+                return;
+
+            EditorApplication.update -= MonitorBatchRun;
+            bool passed = status.StartsWith("PASS", StringComparison.Ordinal);
+            SessionState.EraseBool(BatchSessionKey);
+            Debug.Log("[SpatialWindowVerification] Batch result: " + status);
+            EditorApplication.Exit(passed ? 0 : 1);
+        }
 
         public static string Begin()
         {
@@ -132,14 +178,18 @@ namespace NeuroPilotXR.Editor
                     hand + " selected panel did not follow 3D hand movement; delta=" + actual);
                 Require(Mathf.Abs(Vector3.Dot(actual, panel.forward)) > 0.07f,
                     hand + " drag had no depth movement; delta=" + actual);
-                Results.Add(hand + " trigger + 3D drag (" + actual.magnitude.ToString("F3") + " m)");
+                Vector3 expectedForward = Vector3.ProjectOnPlane(panel.position - Camera.main.transform.position, Vector3.up).normalized;
+                Vector3 actualForward = Vector3.ProjectOnPlane(panel.forward, Vector3.up).normalized;
+                Require(Vector3.Dot(actualForward, expectedForward) > 0.995f && Vector3.Dot(panel.up, Vector3.up) > 0.995f,
+                    hand + " dragged panel did not remain upright and viewer-facing");
+                Results.Add(hand + " trigger + 3D drag + viewer-facing rotation (" + actual.magnitude.ToString("F3") + " m)");
 
                 Pose(device, controller.transform.parent, position, rotation, false);
                 yield return 12;
                 Require(!grab.isSelected, hand + " trigger release did not release panel");
                 Vector3 released = panel.position;
                 Pose(device, controller.transform.parent, position + Vector3.up * 0.20f, rotation, false);
-                yield return 18;
+                yield return 30;
                 Require(Vector3.Distance(panel.position, released) < 0.005f, hand + " released panel drifted");
                 Results.Add(hand + " release stays fixed");
 
@@ -147,21 +197,21 @@ namespace NeuroPilotXR.Editor
                 position = Camera.main.transform.position + panel.forward * 0.20f;
                 rotation = Quaternion.LookRotation(enter.transform.position - position, Vector3.up);
                 Pose(device, controller.transform.parent, position, rotation, false);
-                yield return 18;
+                yield return 45;
                 UnityEngine.EventSystems.RaycastResult uiHit;
                 Require(ray.TryGetCurrentUIRaycastResult(out uiHit) && uiHit.gameObject == enter.gameObject,
                     hand + " ray did not hit Enter button; UI hit=" + (uiHit.gameObject != null ? uiHit.gameObject.name : "none"));
                 Pose(device, controller.transform.parent, position, rotation, true);
-                yield return 8;
+                yield return 15;
                 Require(!grab.isSelected, hand + " normal button press incorrectly grabbed panel");
                 Pose(device, controller.transform.parent, position, rotation, false);
-                yield return 35;
-                Transform difficulty = panel.Find("DifficultyPage");
-                Require(difficulty != null && difficulty.gameObject.activeSelf && difficulty.GetComponent<CanvasGroup>().alpha > 0.99f,
-                    hand + " trigger click did not open difficulty page; active=" + (difficulty != null && difficulty.gameObject.activeSelf) +
-                    " alpha=" + (difficulty != null ? difficulty.GetComponent<CanvasGroup>().alpha : -1f));
+                yield return 45;
+                Transform mode = panel.Find("ModePage");
+                Require(mode != null && mode.gameObject.activeSelf && mode.GetComponent<CanvasGroup>().alpha > 0.99f,
+                    hand + " trigger click did not open mode page; active=" + (mode != null && mode.gameObject.activeSelf) +
+                    " alpha=" + (mode != null ? mode.GetComponent<CanvasGroup>().alpha : -1f));
                 Require(Vector3.Distance(panel.position, released) < 0.005f, hand + " UI click moved panel");
-                Results.Add(hand + " button click transitions without grab");
+                Results.Add(hand + " button click opens mode selection without grab");
 
                 navigation.ShowWelcome();
                 Pose(device, controller.transform.parent, position - panel.forward * 2f, rotation, false);

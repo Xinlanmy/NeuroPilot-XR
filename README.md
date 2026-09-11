@@ -1,6 +1,6 @@
 # NeuroPilot-XR
 
-基于 Unity 开发的注意力训练场景。目标 VR 设备为 VIVE Focus Vision，脑机设备为博瑞康。当前工程为 **2.0 测试版**，以白色房间为基础；Unity 与算法服务的 WebSocket 桥已接入，真实 EEG 分类器仍需现场联调。
+基于 Unity 开发的注意力训练场景。目标 VR 设备为 VIVE Focus Vision，脑机设备为博瑞康。当前工程为 **2.0.1 测试版**，以白色房间为基础；Unity 与算法服务的 WebSocket 桥已接入，真实 EEG 分类器仍需现场联调。
 
 ## 当前功能
 
@@ -11,7 +11,7 @@
 - 单球追踪：保留原强度页和 TrainingRoom，一个 SSVEP 球，仅由脑电确认消息命中；扳机/空格不再模拟命中。
 - 多球定位：3 个球以 12/10/8 Hz 候选频率同时闪烁，仅由脑电确认目标；不依赖眼动、不需要注视起闪，手柄只操作 UI。
 - 三个模式的成功反馈：小球散成星形碎片消失，播放约 0.38 秒奖励音。单球和多球通过 WebSocket 接收算法侧确认，不会在未连接分类器时自动产生命中。
-- 左右手射线点击；指向顶部并按住食指扳机，可在空间中拖动窗口，松手后固定。
+- 左右手射线点击；指向顶部并按住食指扳机，可在空间中拖动窗口。拖动过程中窗口保持竖直并持续正面朝向头显，松手后固定最终位置和朝向。
 - 每次启动及从后台返回入口，按当前头显位置重新摆放到正前方约 1.5 米，中心低于眼睛约 10 厘米；正常转头时窗口保持世界空间位置。
 - 默认选择“标准”，并将所选难度传递到训练场景。
 - 训练房间支持 180 秒计时、统计、结算和重新开始。单球结算后侧握键或 R 重开；新模式使用“重新训练”按钮。
@@ -30,8 +30,8 @@
 ## 下载与文档
 
 - [VIVE USB 串流驱动与安装说明（Windows）](Tools/Drivers/VIVE/README.md)
-- [2.0 三模式使用、脑电协议与验收说明](2.0三模式与反馈说明.md)
-- 2.0 本地 APK 输出：`Builds/Android/NeuroPilotXR_2.0.apk`。
+- [2.0.1 三模式使用、脑电协议与验收说明](2.0三模式与反馈说明.md)
+- 2.0.1 本地 APK 输出：`Builds/Android/NeuroPilotXR_2.0.1.apk`。
 - [1.1.2 正前方出球与 EEG 接口预留版](https://github.com/Xinlanmy/NeuroPilot-XR/releases/tag/v1.1.2)
 - [1.1.2 队友更新教程、接口约定与验收](1.1.2白色房间更新与脑电接口.md)
 - [1.1.1 TrainingRoom 修复安装包](https://github.com/Xinlanmy/NeuroPilot-XR/releases/tag/v1.1.1)
@@ -39,7 +39,7 @@
 - [新手操作教程](新手操作教程.md)
 - [拖动与启动定位修复验收](拖动与启动定位修复验收.md)
 
-APK 包名为 `com.neuropilot.xr`。2.0 测试构建的 versionCode 为 `7`；同签名时可覆盖安装之前的测试版本。
+APK 包名为 `com.neuropilot.xr`。2.0.1 测试构建的 versionCode 为 `8`；同签名时可覆盖安装之前的测试版本。
 
 ## 目录
 
@@ -61,7 +61,7 @@ Unity 缓存、日志、本地备份和构建产物不进入源码历史。最�
 
 主要依赖：URP 14.0.12、XR Interaction Toolkit 2.5.4、OpenXR 1.12.1、Input System 1.7.0、XR Hands 1.4.1、VIVE OpenXR 2.5.1、MCP for Unity 10.0.0。完整版本以 `Packages/manifest.json` 和锁文件为准。
 
-2.0 已通过 Unity 编译、EditMode 发布契约测试、Android ARM64 IL2CPP 构建、APK 签名与清单检查，以及真实 WebSocket 服务的软件闭环测试。正式头显手感、眼动精度、实际闪烁频率和 EEG 硬件闭环仍需真机验收。当前 VIVE OpenXR 原生库有 Android 15 16 KB 对齐相关警告，商店发布前需要随 SDK 升级处理。
+2.0.1 已通过 Unity 编译、EditMode 发布契约测试、导航窗口交互回归、Android ARM64 IL2CPP 构建、APK 签名与清单检查，以及真实 WebSocket 服务的软件闭环测试。正式头显手感、眼动精度、实际闪烁频率和 EEG 硬件闭环仍需真机验收。当前 VIVE OpenXR 原生库有 Android 15 16 KB 对齐相关警告，商店发布前需要随 SDK 升级处理。
 
 1.1.1 已通过编辑器端到端验证：入口按钮转场、唯一摄像机/XR Origin、强度传递、出球、键盘模拟命中、漏失、结算与重开。为避免与旧 APK 混淆，头显应用名显示为 `NeuroPilot XR 1.1.1`，入口显示 `v1.1.1 TRAININGROOM`。训练/结算预览及验收步骤见 [1.1 场景接入与验收](1.1场景接入与验收.md)。
 
