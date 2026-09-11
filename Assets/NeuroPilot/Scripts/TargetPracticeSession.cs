@@ -80,6 +80,10 @@ namespace NeuroPilotXR.Navigation
             // Authored in the scene, clamped but never overwritten: the previous hard-coded 5 here is
             // why every dwellSeconds value set in a scene was ignored.
             dwellSeconds = Mathf.Max(0.2f, dwellSeconds);
+            dwellGraceSeconds = Mathf.Max(0f, dwellGraceSeconds);
+            offTargetDecayPerSecond = Mathf.Max(0f, offTargetDecayPerSecond);
+            eyeTargetDiameter = Mathf.Clamp(eyeTargetDiameter, 0.1f, 1f);
+            eyeTargetDepth = Mathf.Max(0.55f, eyeTargetDepth);
             view.enabled = false;
             view.session = null;
             if (director != null) director.EpisodeChanged += OnEpisode;
@@ -122,21 +126,22 @@ namespace NeuroPilotXR.Navigation
                 view.hintText.text = "频率池尚未配置或无效：已禁止闪烁，请返回检查配置";
                 yield break;
             }
-            while (!focused || (UsesGaze && !gaze.TryGetRay(out _)))
+            while (!focused || (UsesGaze && (gaze == null || !gaze.TryGetRay(out _))))
             {
                 // Ship the runtime readout with the failure: on device this is the only way to tell a
                 // missing extension apart from a calibration problem.
-                view.hintText.text = "未获取有效眼动：请在头显设置中开启眼动并完成校准\n" + gaze.Diagnostic;
+                view.hintText.text = "未获取有效眼动：请在头显设置中开启眼动并完成校准" + GazeDiagnostic();
                 yield return null;
             }
             view.countdownRoot.SetActive(true);
             float ready = 3f;
             while (ready > 0f)
             {
-                bool valid = focused && (!UsesGaze || gaze.TryGetRay(out _));
+                bool valid = focused && (!UsesGaze || (gaze != null && gaze.TryGetRay(out _)));
                 view.countdownText.text = valid ? Mathf.CeilToInt(ready).ToString() : "暂停";
                 view.countdownText.fontSize = valid ? 104 : 60;
-                view.hintText.text = valid ? "小球将在入场时的身前区域出现" : "等待有效眼动数据，倒计时暂停\n" + gaze.Diagnostic;
+                view.hintText.text = valid ? "小球将在入场时的身前区域出现" :
+                    "等待有效眼动数据，倒计时暂停" + GazeDiagnostic();
                 if (valid) ready -= Time.deltaTime;
                 yield return null;
             }
@@ -147,7 +152,7 @@ namespace NeuroPilotXR.Navigation
                 var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 ball.name = "Practice Target " + (i + 1);
                 ball.transform.SetParent(transform, true);
-                ball.transform.localScale = Vector3.one * eyeTargetDiameter;
+                ball.transform.localScale = Vector3.one * (UsesGaze ? eyeTargetDiameter : 0.32f);
                 var target = ball.AddComponent<PracticeTarget>();
                 target.Slot = i + 1; target.ColorIndex = i; target.Surface = ball.GetComponent<Renderer>();
                 target.Surface.sharedMaterial = targetMaterial;
@@ -171,17 +176,18 @@ namespace NeuroPilotXR.Navigation
                 DrainOffTarget(Mathf.Min(Time.deltaTime, .1f));
                 return;
             }
-            hasEyeSample = !UsesGaze || gaze.TryGetRay(out _);
+            hasEyeSample = !UsesGaze || (gaze != null && gaze.TryGetRay(out _));
             if (hasEyeSample) Remaining = Mathf.Max(0f, Remaining - Time.deltaTime);
             if (Remaining <= 0f) { Finish(); return; }
             foreach (var target in targets)
                 if (target.FeedbackUntil > 0f && Time.time >= target.FeedbackUntil) Place(target);
             if (UsesGaze)
             {
-                bool valid = gaze.TryGetRay(out Ray ray);
+                Ray ray = default;
+                bool valid = gaze != null && gaze.TryGetRay(out ray);
                 TickGaze(valid, ray, Mathf.Min(Time.deltaTime, .1f));
                 view.hintText.text = !valid
-                    ? "眼动暂不可用 · 已暂停计时，请检查佩戴或重新校准\n" + gaze.Diagnostic
+                    ? "眼动暂不可用 · 已暂停计时，请检查佩戴或重新校准" + GazeDiagnostic()
                     : (ColorGaze ? "请持续观察蓝色目标 " : "持续注视小球 ") + Mathf.RoundToInt(dwellSeconds) + " 秒  " +
                       Mathf.RoundToInt(DwellProgress * 100f) + "%";
             }
@@ -214,6 +220,11 @@ namespace NeuroPilotXR.Navigation
             graceLeft -= forgiven;
             float drain = delta - forgiven;
             if (drain > 0f) dwell = Mathf.Max(0f, dwell - drain * offTargetDecayPerSecond);
+        }
+
+        private string GazeDiagnostic()
+        {
+            return UsesGaze && gaze != null ? "\n" + gaze.Diagnostic : string.Empty;
         }
 
         private PracticeTarget Resolve(Ray ray)

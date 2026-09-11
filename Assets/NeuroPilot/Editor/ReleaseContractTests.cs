@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.OpenXR;
 using UnityEngine.XR.OpenXR.Features;
+using VIVE.OpenXR;
 
 namespace NeuroPilotXR.Editor
 {
@@ -44,6 +45,19 @@ namespace NeuroPilotXR.Editor
         {
             Assert.IsFalse(SpatialWindowDragController.TryCalculateFacingRotation(
                 new Vector3(1f, 3f, 2f), new Vector3(1f, 1f, 2f), out _));
+        }
+
+        [Test]
+        public void ViveEyePoseIsConvertedFromOpenXrHandedness()
+        {
+            float half = Mathf.Sqrt(0.5f);
+            var source = new XrPosef(
+                new XrQuaternionf(0f, half, 0f, half),
+                new XrVector3f(1f, 2f, 3f));
+
+            Pose converted = EyeGazeProvider.ConvertVivePose(source);
+            Assert.AreEqual(new Vector3(1f, 2f, -3f), converted.position);
+            Assert.Greater(Vector3.Dot(converted.forward, Vector3.left), 0.9999f);
         }
 
         [Test]

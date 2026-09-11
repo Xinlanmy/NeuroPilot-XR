@@ -110,6 +110,7 @@ namespace NeuroPilotXR.Navigation
             ray = default;
             InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.EyeTracking, devices);
             LegacyDeviceCount = devices.Count;
+            LegacyState = InputTrackingState.None;
             foreach (var device in devices)
             {
                 if (!device.isValid) continue;
@@ -161,10 +162,9 @@ namespace NeuroPilotXR.Navigation
                 {
                     XrSingleEyeGazeDataHTC gaze = gazes[i];
                     if ((uint)gaze.isValid == 0u) continue;
-                    Vector3 position = new Vector3(gaze.gazePose.position.x, gaze.gazePose.position.y, gaze.gazePose.position.z);
-                    Quaternion rotation = new Quaternion(gaze.gazePose.orientation.x, gaze.gazePose.orientation.y,
-                        gaze.gazePose.orientation.z, gaze.gazePose.orientation.w);
-                    Vector3 direction = rotation * Vector3.forward;
+                    Pose unityPose = ConvertVivePose(gaze.gazePose);
+                    Vector3 position = unityPose.position;
+                    Vector3 direction = unityPose.rotation * Vector3.forward;
                     if (!Finite(position) || !Finite(direction) || direction.sqrMagnitude < 0.5f) continue;
                     positionSum += position; directionSum += direction.normalized; count++;
                 }
@@ -188,6 +188,12 @@ namespace NeuroPilotXR.Navigation
                 }
                 return false;
             }
+        }
+
+        /// <summary>Converts a right-handed OpenXR pose into Unity tracking space.</summary>
+        public static Pose ConvertVivePose(XrPosef pose)
+        {
+            return new Pose(pose.position.ToUnityVector(), pose.orientation.ToUnityQuaternion());
         }
 
         private static bool Finite(Vector3 value) =>
