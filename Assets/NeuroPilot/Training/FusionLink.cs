@@ -35,6 +35,9 @@ namespace NeuroPilotXR.Training
         /// 只分发 command_ 前缀信封——ping 等心跳与非命令类型不进入，避免每秒心跳流经命令解析缝。</summary>
         public event Action<string> CommandEnvelopeReceived;
 
+        /// <summary>所有已解析信封原文（主线程），供遥测面板等非命令消费者使用。</summary>
+        public event Action<string> EnvelopeReceived;
+
         /// <summary>每次新连接建立后触发（主线程续体）：适配器在此复位下行 seq 基线。</summary>
         public event Action Connected;
 
@@ -263,6 +266,7 @@ namespace NeuroPilotXR.Training
 
                     if (FusionJson.TryParseEnvelope(sb.ToString(), out string type, out FusionJson envelope))
                     {
+                        EnvelopeReceived?.Invoke(sb.ToString());
                         if (type != "ping" && type.StartsWith("command_", StringComparison.Ordinal))
                         {
                             CommandEnvelopeReceived?.Invoke(sb.ToString());
