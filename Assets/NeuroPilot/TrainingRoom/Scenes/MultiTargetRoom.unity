@@ -2092,7 +2092,7 @@ MonoBehaviour:
   restartButton: {fileID: 237722130}
   director: {fileID: 1000722219}
   duration: 180
-  dwellSeconds: 1
+  dwellSeconds: 5
   acceptExternalConfirm: 1
 --- !u!114 &1000722217
 MonoBehaviour:
