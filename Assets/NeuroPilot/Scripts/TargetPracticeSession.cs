@@ -94,6 +94,8 @@ namespace NeuroPilotXR.Navigation
         private void ResetRound()
         {
             ClearTargets();
+            var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
+            if (telemetry != null) telemetry.HideProfile();
             Hits = Misses = 0; dwell = validEyeTime = onTargetTime = 0f;
             Remaining = duration; finished = false; Running = false;
             if (restartButton != null) restartButton.interactable = false;
@@ -285,6 +287,9 @@ namespace NeuroPilotXR.Navigation
         private void Finish()
         {
             Running = false; finished = true; ClearTargets(); RefreshStats();
+            var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
+            if (telemetry != null) telemetry.ShowSessionResult(Hits, Misses,
+                Hits + Misses > 0 ? 100f * Hits / (Hits + Misses) : 0f, 0f);
             if (restartButton != null) restartButton.interactable = true;
             view.resultPanel.SetActive(true); view.countdownRoot.SetActive(false);
             view.statsRoot.SetActive(false); view.footerRoot.SetActive(false);
