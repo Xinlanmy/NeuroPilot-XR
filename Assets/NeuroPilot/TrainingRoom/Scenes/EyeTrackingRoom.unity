@@ -852,7 +852,7 @@ MonoBehaviour:
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 0
-    m_VerticalOverflow: 0
+    m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u9762\u5411\u524D\u65B9\u9776\u533A  \xB7  \u51C6\u5907\u5F00\u59CB"
 --- !u!222 &292637396
@@ -2079,7 +2079,11 @@ MonoBehaviour:
   restartButton: {fileID: 237722130}
   director: {fileID: 0}
   duration: 180
-  dwellSeconds: 1
+  dwellSeconds: 5
+  dwellGraceSeconds: 0.3
+  offTargetDecayPerSecond: 2
+  eyeTargetDiameter: 0.5
+  eyeTargetDepth: 3.6
   acceptExternalConfirm: 0
 --- !u!114 &1000722217
 MonoBehaviour:
