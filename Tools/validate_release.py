@@ -12,9 +12,9 @@ def require(condition: bool, message: str) -> None:
     print("PASS:", message)
 
 project = read("ProjectSettings/ProjectSettings.asset")
-require("bundleVersion: 2.0" in project, "bundle version is 2.0")
-require("productName: NeuroPilot XR 2.0" in project, "product name is NeuroPilot XR 2.0")
-require("AndroidBundleVersionCode: 7" in project, "Android versionCode is 7")
+require("bundleVersion: 2.0.1" in project, "bundle version is 2.0.1")
+require("productName: NeuroPilot XR 2.0.1" in project, "product name is NeuroPilot XR 2.0.1")
+require("AndroidBundleVersionCode: 8" in project, "Android versionCode is 8")
 require(re.search(r"scriptingBackend:\s+Android: 1", project) is not None, "Android uses IL2CPP")
 require("AndroidTargetArchitectures: 2" in project, "Android is ARM64-only")
 
@@ -35,6 +35,11 @@ require("m_AnchoredPosition: {x: -400, y: -365}" in nav and
         "m_AnchoredPosition: {x: 0, y: -365}" in nav and
         "m_AnchoredPosition: {x: 400, y: -365}" in nav,
         "settings action buttons use non-overlapping positions")
+
+drag = read("Assets/NeuroPilot/Scripts/SpatialWindowDragController.cs")
+require("private void LateUpdate()" in drag and "TryCalculateFacingRotation" in drag and
+        "grabInteractable.trackRotation = false" in drag,
+        "dragged navigation window stays upright and faces the viewer")
 
 openxr = read("Assets/XR/Settings/OpenXR Package Settings.asset")
 for name in ("VIVEFocus3Profile Android", "VIVEFocus3Feature Android", "ViveEyeTracker Android"):

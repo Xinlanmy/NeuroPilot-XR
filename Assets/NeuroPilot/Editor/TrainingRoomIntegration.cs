@@ -22,8 +22,8 @@ namespace NeuroPilotXR.Editor
         public const string NavigationPath = "Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity";
         private const string Root = "Assets/NeuroPilot/TrainingRoom";
         private const string RigPath = "Assets/Samples/XR Interaction Toolkit/2.5.4/Starter Assets/Prefabs/XR Interaction Setup.prefab";
-        public const string Version = "2.0";
-        private const string ApkPath = "Builds/Android/NeuroPilotXR_2.0.apk";
+        public const string Version = "2.0.1";
+        private const string ApkPath = "Builds/Android/NeuroPilotXR_2.0.1.apk";
 
         [MenuItem("NeuroPilot/Training Room/Integrate Imported Scene")]
         public static void Prepare()
@@ -135,7 +135,7 @@ namespace NeuroPilotXR.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(NavigationPath, true), new EditorBuildSettingsScene(ScenePath, true) };
             PlayerSettings.productName = "NeuroPilot XR " + Version;
             PlayerSettings.bundleVersion = Version;
-            PlayerSettings.Android.bundleVersionCode = 7;
+            PlayerSettings.Android.bundleVersionCode = 8;
             AssetDatabase.SaveAssets();
             // Remove only obsolete adapter-generated helper materials; prefab shader references are restored above.
             AssetDatabase.DeleteAsset(Root + "/Materials/TrainingRoom_TunnelingVignette.mat");
@@ -172,7 +172,7 @@ namespace NeuroPilotXR.Editor
             ViveFocusVisionConfigurator.ValidateProject();
             PlayerSettings.productName = "NeuroPilot XR " + Version;
             PlayerSettings.bundleVersion = Version;
-            PlayerSettings.Android.bundleVersionCode = 7;
+            PlayerSettings.Android.bundleVersionCode = 8;
             Directory.CreateDirectory("Builds/Android");
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
@@ -182,7 +182,7 @@ namespace NeuroPilotXR.Editor
                 options = BuildOptions.DetailedBuildReport
             });
             Debug.Log("[TrainingRoomIntegration] BUILD " + report.summary.result + " errors=" + report.summary.totalErrors);
-            File.WriteAllText("Builds/Android/NeuroPilotXR_2.0-build-report.txt",
+            File.WriteAllText("Builds/Android/NeuroPilotXR_2.0.1-build-report.txt",
                 $"Result: {report.summary.result}\nErrors: {report.summary.totalErrors}\nWarnings: {report.summary.totalWarnings}\n" +
                 $"Bytes: {report.summary.totalSize}\nDuration: {report.summary.totalTime}\nScenes:\n" + string.Join("\n", ThreeModeSetup.ScenePaths));
             if (report.summary.result != BuildResult.Succeeded) throw new InvalidOperationException("Android build failed.");
