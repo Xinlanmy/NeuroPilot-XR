@@ -2032,6 +2032,8 @@ GameObject:
   - component: {fileID: 1000722216}
   - component: {fileID: 1000722217}
   - component: {fileID: 1000722219}
+  - component: {fileID: 1000722220}
+  - component: {fileID: 1000722221}
   - component: {fileID: 482150936}
   m_Layer: 0
   m_Name: SessionManager
@@ -2084,15 +2086,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mode: 2
   entry: {fileID: 1000722215}
-  gaze: {fileID: 0}
+  gaze: {fileID: 1000722220}
   area: {fileID: 11400000, guid: 772e9860eb6d6c5468f44bb4b0bd4dde, type: 2}
   view: {fileID: 458251493}
   targetMaterial: {fileID: 2100000, guid: 3d8a0966e0bff274297839af6e674963, type: 2}
   reward: {fileID: 1000722217}
   restartButton: {fileID: 237722130}
   director: {fileID: 1000722219}
+  gate: {fileID: 1000722221}
   duration: 180
   dwellSeconds: 1
+  dwellGraceSeconds: 0.3
+  offTargetDecayPerSecond: 2
+  eyeTargetDiameter: 0.24
+  eyeHitDiameter: 0.36
+  eyeTargetDepth: 3.6
+  multiTargetCount: 6
+  multiSpawnHalfWidth: 1.9
+  multiSpawnYRange: {x: -0.4, y: 1}
+  multiSpawnDepth: 4.1
+  multiMinSpacing: 0.9
   acceptExternalConfirm: 1
 --- !u!114 &1000722217
 MonoBehaviour:
@@ -2122,6 +2135,46 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   config: {fileID: 11400000, guid: f5a59811b7b1a9346862688d2e5501f4, type: 2}
+--- !u!114 &1000722220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000722212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0861f66a787993648a87b849af93316e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  origin: {fileID: 1877975505}
+  TestOverride: 0
+  TestValid: 0
+--- !u!114 &1000722221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000722212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8279a339474823c4ab7c28c388d822ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  policy: 0
+  session: {fileID: 1000722216}
+  gaze: {fileID: 1000722220}
+  director: {fileID: 1000722219}
+  view: {fileID: 0}
+  dwellSeconds: 0.3
+  leaveHysteresisSeconds: 0.5
+  rampSeconds: 0.4
+  maxSimultaneous: 3
+  neighborRadiusMeters: 2.4
+  maxViewAngleDeg: 50
+  gazeLossFallbackSeconds: 3
+  rearmSeconds: 6
 --- !u!1 &1008331132
 GameObject:
   m_ObjectHideFlags: 0

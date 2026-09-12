@@ -12,11 +12,11 @@ def require(condition: bool, message: str) -> None:
     print("PASS:", message)
 
 project = read("ProjectSettings/ProjectSettings.asset")
-require(re.search(r"^  bundleVersion: 2\.1\.1$", project, re.M) is not None, "bundle version is 2.1.1")
-require(re.search(r"^  productName: NeuroPilot XR 2\.1\.1$", project, re.M) is not None,
-        "product name is NeuroPilot XR 2.1.1")
-require(re.search(r"^  AndroidBundleVersionCode: 10$", project, re.M) is not None,
-        "Android versionCode is 10")
+require(re.search(r"^  bundleVersion: 2\.2\.0$", project, re.M) is not None, "bundle version is 2.2.0")
+require(re.search(r"^  productName: NeuroPilot XR 2\.2\.0$", project, re.M) is not None,
+        "product name is NeuroPilot XR 2.2.0")
+require(re.search(r"^  AndroidBundleVersionCode: 11$", project, re.M) is not None,
+        "Android versionCode is 11")
 require(re.search(r"scriptingBackend:\s+Android: 1", project) is not None, "Android uses IL2CPP")
 require("AndroidTargetArchitectures: 2" in project, "Android is ARM64-only")
 
@@ -29,6 +29,25 @@ bridge_guid = "6f4c2a91d7e34b58a0c9e12f83b7d604"
 for scene in ("TrainingRoom", "MultiTargetRoom"):
     data = read(f"Assets/NeuroPilot/TrainingRoom/Scenes/{scene}.unity")
     require(data.count(bridge_guid) == 1, f"{scene} contains exactly one FusionEegBridge")
+
+# L2 门控子集闪烁：多球房 = 眼动门控 + 脑电确认（参数权威值在场景，TOML [ssvep.gate] 是镜像）
+multi_scene = read("Assets/NeuroPilot/TrainingRoom/Scenes/MultiTargetRoom.unity")
+require(multi_scene.count("8279a339474823c4ab7c28c388d822ed") == 1,
+        "MultiTargetRoom wires exactly one GazeSubsetGate")
+require(multi_scene.count("0861f66a787993648a87b849af93316e") == 1,
+        "MultiTargetRoom keeps the eye gaze provider for gating")
+require(all(value in multi_scene for value in ("policy: 0", "dwellSeconds: 0.3",
+                                               "leaveHysteresisSeconds: 0.5", "rampSeconds: 0.4",
+                                               "maxSimultaneous: 3", "rearmSeconds: 6")),
+        "gate parameters match the L2 contract")
+require(all(value in multi_scene for value in ("multiTargetCount: 6", "multiSpawnHalfWidth: 1.9",
+                                               "multiSpawnDepth: 4.1", "multiMinSpacing: 0.9")),
+        "six targets with a bounded non-overlapping respawn region")
+gate = read("Assets/NeuroPilot/Scripts/GazeSubsetGate.cs")
+require("TryAssign" in read("Assets/NeuroPilot/Scripts/MultiFrequencyConfig.cs") and
+        "TakenFrequencies" in read("Assets/NeuroPilot/Scripts/SsvepTargetGroup.cs") and
+        "StepGaze" in gate and "StepAlwaysOn" in gate,
+        "gating uses the shared max-min allocator and the always-on degradation path")
 
 nav = read("Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity")
 require("m_Name: TestConnButton" in nav and "m_MethodName: TestConnection" in nav,
