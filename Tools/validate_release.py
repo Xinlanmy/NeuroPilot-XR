@@ -12,9 +12,9 @@ def require(condition: bool, message: str) -> None:
     print("PASS:", message)
 
 project = read("ProjectSettings/ProjectSettings.asset")
-require("bundleVersion: 2.0.1" in project, "bundle version is 2.0.1")
-require("productName: NeuroPilot XR 2.0.1" in project, "product name is NeuroPilot XR 2.0.1")
-require("AndroidBundleVersionCode: 8" in project, "Android versionCode is 8")
+require("bundleVersion: 2.1" in project, "bundle version is 2.1")
+require("productName: NeuroPilot XR 2.1" in project, "product name is NeuroPilot XR 2.1")
+require("AndroidBundleVersionCode: 9" in project, "Android versionCode is 9")
 require(re.search(r"scriptingBackend:\s+Android: 1", project) is not None, "Android uses IL2CPP")
 require("AndroidTargetArchitectures: 2" in project, "Android is ARM64-only")
 
@@ -40,6 +40,16 @@ drag = read("Assets/NeuroPilot/Scripts/SpatialWindowDragController.cs")
 require("private void LateUpdate()" in drag and "TryCalculateFacingRotation" in drag and
         "grabInteractable.trackRotation = false" in drag,
         "dragged navigation window stays upright and faces the viewer")
+
+gaze = read("Assets/NeuroPilot/Scripts/EyeGazeProvider.cs")
+require("TryOpenXrEyeGaze" in gaze and "TryViveEyeTracker" in gaze and "ConvertVivePose" in gaze,
+        "eye tracking uses OpenXR with a converted VIVE fallback")
+
+fusion = read("Assets/NeuroPilot/Training/FusionEegBridge.cs")
+telemetry = read("Assets/NeuroPilot/Training/VrTelemetryPanel.cs")
+require(all(event in fusion for event in ("attention_update", "fatigue_update", "cognitive_profile")) and
+        "ShowSessionResult" in telemetry,
+        "attention, fatigue and cognitive profile telemetry are connected")
 
 openxr = read("Assets/XR/Settings/OpenXR Package Settings.asset")
 for name in ("VIVEFocus3Profile Android", "VIVEFocus3Feature Android", "ViveEyeTracker Android"):

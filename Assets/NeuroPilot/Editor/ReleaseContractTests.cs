@@ -21,9 +21,9 @@ namespace NeuroPilotXR.Editor
         {
             ViveFocusVisionConfigurator.ApplyProjectProfile();
             Assert.DoesNotThrow(ViveFocusVisionConfigurator.ValidateProject);
-            Assert.AreEqual(8, PlayerSettings.Android.bundleVersionCode);
-            Assert.AreEqual("2.0.1", PlayerSettings.bundleVersion);
-            Assert.AreEqual("NeuroPilot XR 2.0.1", PlayerSettings.productName);
+            Assert.AreEqual(9, PlayerSettings.Android.bundleVersionCode);
+            Assert.AreEqual("2.1", PlayerSettings.bundleVersion);
+            Assert.AreEqual("NeuroPilot XR 2.1", PlayerSettings.productName);
             Assert.AreEqual("com.neuropilot.xr", PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android));
         }
 
