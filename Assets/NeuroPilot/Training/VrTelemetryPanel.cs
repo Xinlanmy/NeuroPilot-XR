@@ -28,7 +28,7 @@ namespace NeuroPilotXR.Training
 
         private void Awake()
         {
-            Build();
+            EnsureBuilt();
         }
 
         private void Update()
@@ -42,6 +42,7 @@ namespace NeuroPilotXR.Training
         public void SetAttention(FusionJson payload)
         {
             if (payload == null) return;
+            EnsureBuilt();
             attentionScore = Read01(payload, "score", attentionScore);
             quality = Read01(payload, "quality", quality);
             double valid = payload.Num("valid", 0.0);
@@ -56,6 +57,7 @@ namespace NeuroPilotXR.Training
         public void SetFatigue(FusionJson payload)
         {
             if (payload == null) return;
+            EnsureBuilt();
             fatigueScore = Read01(payload, "score", fatigueScore);
             state = payload.Str("state", state);
             fatigueDuration = payload.Num("low_duration_s", fatigueDuration);
@@ -64,6 +66,7 @@ namespace NeuroPilotXR.Training
 
         public void ShowCognitiveProfile(FusionJson payload)
         {
+            if (payload == null) return;
             double hits = payload.Num("hits", double.NaN);
             double misses = payload.Num("misses", double.NaN);
             double hitRate = payload.Num("hit_rate", double.NaN);
@@ -80,9 +83,10 @@ namespace NeuroPilotXR.Training
 
         public void HideProfile()
         {
-            if (profileText != null) profileText.gameObject.SetActive(false);
-            if (attentionText != null) attentionText.gameObject.SetActive(true);
-            if (fatigueText != null) fatigueText.gameObject.SetActive(true);
+            EnsureBuilt();
+            profileText.gameObject.SetActive(false);
+            attentionText.gameObject.SetActive(true);
+            fatigueText.gameObject.SetActive(true);
             validSamples = 0;
             attentionSum = 0.0;
             fatigueDuration = 0.0;
@@ -91,7 +95,7 @@ namespace NeuroPilotXR.Training
         private void ShowProfile(double hits, double misses, double hitRate, double avgReaction,
             double attentionMean, double fatigueSeconds)
         {
-            if (profileText == null) return;
+            EnsureBuilt();
             attentionText.gameObject.SetActive(false);
             fatigueText.gameObject.SetActive(false);
             profileText.gameObject.SetActive(true);
@@ -111,6 +115,11 @@ namespace NeuroPilotXR.Training
             return double.IsNaN(value) || double.IsInfinity(value)
                 ? fallback
                 : Mathf.Clamp01((float)value);
+        }
+
+        private void EnsureBuilt()
+        {
+            if (root == null) Build();
         }
 
         private void Build()
