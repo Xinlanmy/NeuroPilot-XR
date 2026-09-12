@@ -16,6 +16,7 @@ namespace NeuroPilotXR.Training
         private FusionLink _link;
         private TrainingEegPort _single;
         private TargetPracticeSession _multi;
+        private VrTelemetryPanel _telemetry;
         private float _offlineSince = -1f;
         private bool _warnedOffline;
         private Func<long> _nextSequence;
@@ -36,12 +37,17 @@ namespace NeuroPilotXR.Training
             // 才发起首连。Update 的比较仅作设置页改址后的免重启同步兜底。
             _link.ServerUrl = NeuroPilotXR.Navigation.CommunicationSettings.Endpoint;
             _nextSequence = _link.NextSequence;
+            _telemetry = GetComponent<VrTelemetryPanel>();
+            if (_telemetry == null)
+            {
+                _telemetry = gameObject.AddComponent<VrTelemetryPanel>();
+            }
         }
 
         private void OnEnable()
         {
             _link.Connected += OnConnected;
-            _link.CommandEnvelopeReceived += OnRawMessage;
+            _link.EnvelopeReceived += OnAnyMessage;
             if (_single != null)
             {
                 _single.SequenceProvider = _nextSequence;
@@ -61,7 +67,7 @@ namespace NeuroPilotXR.Training
         private void OnDisable()
         {
             _link.Connected -= OnConnected;
-            _link.CommandEnvelopeReceived -= OnRawMessage;
+            _link.EnvelopeReceived -= OnAnyMessage;
             if (_single != null)
             {
                 _single.OutgoingMessage -= _link.SendRaw;
@@ -82,6 +88,34 @@ namespace NeuroPilotXR.Training
             if (_single != null) _single.ResetConnectionSequence();
             if (_multi != null) _multi.ResetConnectionSequence();
             Debug.Log("[FusionEegBridge] 已连接 " + _link.ServerUrl + "，下行 seq 基线已复位（单球=" + (_single != null) + " 多球=" + (_multi != null) + "）");
+        }
+
+        private void OnAnyMessage(string json)
+        {
+            if (FusionJson.TryParseEnvelope(json, out string type, out FusionJson envelope))
+            {
+                FusionJson payload = envelope.Obj("payload") ?? envelope;
+                if (_telemetry != null)
+                {
+                    if (type == "attention_update")
+                    {
+                        _telemetry.SetAttention(payload);
+                        return;
+                    }
+                    if (type == "fatigue_update")
+                    {
+                        _telemetry.SetFatigue(payload);
+                        return;
+                    }
+                    if (type == "cognitive_profile")
+                    {
+                        _telemetry.ShowCognitiveProfile(payload);
+                        return;
+                    }
+                }
+            }
+
+            OnRawMessage(json);
         }
 
         private void OnRawMessage(string json)

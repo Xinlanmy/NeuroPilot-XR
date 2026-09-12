@@ -61,6 +61,31 @@ namespace NeuroPilotXR.Editor
         }
 
         [Test]
+        public void TelemetryPanelClampsInputAndSeparatesLiveAndResultViews()
+        {
+            var host = new GameObject("TelemetryTestHost");
+            try
+            {
+                var panel = host.AddComponent<VrTelemetryPanel>();
+                panel.SetAttention(FusionJson.TryParse("{\"score\":1.4,\"quality\":0.8,\"valid\":1}"));
+                Assert.AreEqual(1f, panel.AttentionScore);
+                Assert.IsTrue(panel.IsLiveTelemetryVisible);
+
+                panel.ShowSessionResult(3, 1, 75f, float.NaN);
+                Assert.IsTrue(panel.IsProfileVisible);
+                Assert.IsFalse(panel.IsLiveTelemetryVisible);
+
+                panel.HideProfile();
+                Assert.IsFalse(panel.IsProfileVisible);
+                Assert.IsTrue(panel.IsLiveTelemetryVisible);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
         public void SsvepFrequenciesMatchFbccaContract()
         {
             var single = AssetDatabase.LoadAssetAtPath<SessionConfig>("Assets/NeuroPilot/TrainingRoom/Config/SessionConfig_Default.asset");
