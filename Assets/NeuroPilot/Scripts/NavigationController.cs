@@ -74,9 +74,9 @@ namespace NeuroPilotXR.Navigation
         {
             if (countLabel != null) countLabel.text = "当前选择：同时 " + TrainingSession.TargetCount + " 个小球";
             if (multiRuleLabel != null) multiRuleLabel.text = TrainingSession.MultiColorGaze
-                ? "已选：持续观察蓝色目标 5 秒" : "已选：手柄射线瞄准任意小球，扣扳机确认";
+                ? "已选：持续观察蓝色目标约 0.8 秒" : "已选：手柄射线瞄准任意小球，扣扳机确认";
             if (eyeRuleLabel != null) eyeRuleLabel.text = TrainingSession.EyeColorGaze
-                ? "已选：持续观察蓝色目标 5 秒" : "已选：连续注视单球 1 秒";
+                ? "已选：持续观察蓝色目标约 0.8 秒" : "已选：连续注视单球 1 秒";
             if (eyeCountLabel != null) eyeCountLabel.text = "当前选择：同时 " + TrainingSession.EyeTargetCount + " 个彩球";
         }
         public void StartSingle() => sceneTransition.BeginMode("TrainingRoom", singleContent, singleStatus, singleStart);

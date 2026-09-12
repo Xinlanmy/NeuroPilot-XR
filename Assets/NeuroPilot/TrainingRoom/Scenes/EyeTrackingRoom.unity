@@ -2079,10 +2079,11 @@ MonoBehaviour:
   restartButton: {fileID: 237722130}
   director: {fileID: 0}
   duration: 180
-  dwellSeconds: 5
+  dwellSeconds: 0.8
   dwellGraceSeconds: 0.3
   offTargetDecayPerSecond: 2
-  eyeTargetDiameter: 0.5
+  eyeTargetDiameter: 0.24
+  eyeHitDiameter: 0.36
   eyeTargetDepth: 3.6
   acceptExternalConfirm: 0
 --- !u!114 &1000722217
@@ -2578,7 +2579,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 
+  m_Text:
 --- !u!222 &1375923454
 CanvasRenderer:
   m_ObjectHideFlags: 0

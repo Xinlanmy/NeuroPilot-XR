@@ -26,15 +26,15 @@ namespace NeuroPilotXR.Navigation
         public int serverPort => CommunicationSettings.Port;
         private bool leaving;
         public float duration = 180f;
-        public float dwellSeconds = 5f;
+        public float dwellSeconds = 0.8f;
         // Real eye trackers jitter by 1-2 degrees and drop out for a few frames on every blink, so a
         // fixation window that resets on a single bad sample is unreachable on hardware. Off-target
         // time first spends a small grace budget, then drains the accumulated dwell.
         public float dwellGraceSeconds = 0.3f;
         public float offTargetDecayPerSecond = 2f;
-        // Ball size and distance set the fixation difficulty: 0.5 m at 3.6 m is about 8 degrees of
-        // visual angle, roughly twice the original 0.32 m at 4.7 m, which was smaller than the jitter.
-        public float eyeTargetDiameter = 0.5f;
+        // The visible dot stays precise; its slightly larger invisible collider absorbs eye-tracker jitter.
+        public float eyeTargetDiameter = 0.24f;
+        public float eyeHitDiameter = 0.36f;
         public float eyeTargetDepth = 3.6f;
         public bool acceptExternalConfirm; // Reserved adapter; no network connection or EEG classifier.
         public int Hits { get; private set; }
@@ -83,6 +83,7 @@ namespace NeuroPilotXR.Navigation
             dwellGraceSeconds = Mathf.Max(0f, dwellGraceSeconds);
             offTargetDecayPerSecond = Mathf.Max(0f, offTargetDecayPerSecond);
             eyeTargetDiameter = Mathf.Clamp(eyeTargetDiameter, 0.1f, 1f);
+            eyeHitDiameter = Mathf.Max(eyeTargetDiameter, eyeHitDiameter);
             eyeTargetDepth = Mathf.Max(0.55f, eyeTargetDepth);
             view.enabled = false;
             view.session = null;
@@ -155,6 +156,7 @@ namespace NeuroPilotXR.Navigation
                 ball.name = "Practice Target " + (i + 1);
                 ball.transform.SetParent(transform, true);
                 ball.transform.localScale = Vector3.one * (UsesGaze ? eyeTargetDiameter : 0.32f);
+                if (UsesGaze) ball.GetComponent<SphereCollider>().radius = eyeHitDiameter / (2f * eyeTargetDiameter);
                 var target = ball.AddComponent<PracticeTarget>();
                 target.Slot = i + 1; target.ColorIndex = i; target.Surface = ball.GetComponent<Renderer>();
                 target.Surface.sharedMaterial = targetMaterial;
@@ -190,7 +192,7 @@ namespace NeuroPilotXR.Navigation
                 TickGaze(valid, ray, Mathf.Min(Time.deltaTime, .1f));
                 view.hintText.text = !valid
                     ? "眼动暂不可用 · 已暂停计时，请检查佩戴或重新校准" + GazeDiagnostic()
-                    : (ColorGaze ? "请持续观察蓝色目标 " : "持续注视小球 ") + Mathf.RoundToInt(dwellSeconds) + " 秒  " +
+                    : (ColorGaze ? "请持续观察蓝色目标 " : "持续注视小球 ") + dwellSeconds.ToString("0.0") + " 秒  " +
                       Mathf.RoundToInt(DwellProgress * 100f) + "%";
             }
             RefreshStats();
@@ -207,12 +209,18 @@ namespace NeuroPilotXR.Navigation
                 graceLeft = dwellGraceSeconds; // Locked on: refill the forgiveness budget.
                 onTargetTime += delta;
                 dwell += delta;
-                target.Surface.material.color = Color.Lerp(BaseColor(target), Color.white, DwellProgress * .25f);
+                float progress = Mathf.Clamp01(DwellProgress);
+                target.transform.localScale = Vector3.one * eyeTargetDiameter * (1f + .18f * progress);
+                target.Surface.material.color = Color.Lerp(BaseColor(target), Color.white, progress * .55f);
                 if (dwell >= dwellSeconds) Hit(target);
                 return;
             }
             DrainOffTarget(delta);
-            foreach (var item in targets) if (item.Available) item.Surface.material.color = BaseColor(item);
+            foreach (var item in targets) if (item.Available)
+            {
+                item.transform.localScale = Vector3.one * eyeTargetDiameter;
+                item.Surface.material.color = BaseColor(item);
+            }
         }
 
         /// <summary>Spends the grace budget first, then removes accumulated dwell.</summary>
@@ -244,7 +252,11 @@ namespace NeuroPilotXR.Navigation
             if (UsesGaze) Emit("target_offset", target); else director.Stop(target);
             target.Id = null;
             Hits++; dwell = 0f; graceLeft = 0f;
-            if (reward != null) reward.Play(target.transform.position);
+            if (reward != null)
+            {
+                if (UsesGaze) reward.PlayGaze(target.transform.position, BaseColor(target), eyeTargetDiameter);
+                else reward.Play(target.transform.position);
+            }
             target.Surface.enabled = false;
             target.GetComponent<Collider>().enabled = false;
         }
@@ -276,6 +288,7 @@ namespace NeuroPilotXR.Navigation
             else found = Spawner.TryPickSpawnPosition(entry.TrainingOrigin, Quaternion.identity, area, old, out best);
             if (!found) { Running = false; view.hintText.text = "靶区配置无可用位置，请返回模式选择"; return; }
             target.transform.position = best;
+            if (UsesGaze) target.transform.localScale = Vector3.one * eyeTargetDiameter;
             target.Surface.enabled = true;
             target.GetComponent<Collider>().enabled = true;
             target.FeedbackUntil = 0f;
