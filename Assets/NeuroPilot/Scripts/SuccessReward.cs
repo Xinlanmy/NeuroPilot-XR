@@ -48,6 +48,46 @@ namespace NeuroPilotXR.Navigation
             if (!isActiveAndEnabled || starMaterial == null) return;
             PlayCount++; StartCoroutine(Burst(position));
         }
+        public void PlayGaze(Vector3 position, Color color, float diameter)
+        {
+            if (!isActiveAndEnabled || starMaterial == null) return;
+            PlayCount++; StartCoroutine(GazeFlash(position, color, diameter));
+        }
+        private IEnumerator GazeFlash(Vector3 position, Color color, float diameter)
+        {
+            var root = new GameObject("Gaze Confirmation Flash");
+            root.transform.SetParent(transform, true);
+            root.transform.position = position;
+            if (soundEnabled)
+            {
+                var source = root.AddComponent<AudioSource>();
+                source.playOnAwake = false; source.spatialBlend = .65f; source.minDistance = 3; source.maxDistance = 20;
+                source.volume = volume; source.clip = chime; source.Play();
+            }
+            var flash = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            flash.name = "Gaze Dot Flash";
+            flash.transform.SetParent(root.transform, false);
+            flash.GetComponent<Collider>().enabled = false;
+            Destroy(flash.GetComponent<Collider>());
+            var material = new Material(starMaterial);
+            flash.GetComponent<Renderer>().sharedMaterial = material;
+            const float flashTime = .24f;
+            float elapsed = 0f;
+            while (elapsed < flashTime)
+            {
+                float progress = Mathf.Clamp01(elapsed / flashTime);
+                flash.transform.localScale = Vector3.one * diameter *
+                    (progress < .35f ? Mathf.Lerp(1f, 1.45f, progress / .35f) :
+                    Mathf.Lerp(1.45f, 0f, (progress - .35f) / .65f));
+                material.color = Color.Lerp(Color.white, color, progress);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            flash.GetComponent<Renderer>().enabled = false;
+            yield return new WaitForSeconds(.38f - flashTime);
+            Destroy(material);
+            Destroy(root);
+        }
         private IEnumerator Burst(Vector3 position)
         {
             var root = new GameObject("Success Star Burst");

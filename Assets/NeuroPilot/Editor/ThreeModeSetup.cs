@@ -129,7 +129,7 @@ namespace NeuroPilotXR.Editor
 
             nav.eyePage = Page(panel, "EyePage", "视线追踪", "先在头显设置中开启眼动并校准 · 无需扣动扳机");
             Panel(nav.eyePage.transform, "Instructions", new Vector2(0, 95), new Vector2(1000, 330));
-            Text(nav.eyePage.transform, "EyeInstructions", "场景内同时出现多个彩色小球\n\n按提示持续观察蓝色目标 5 秒，将它消去\n\n移开视线重新计时；眼动数据丢失时暂停\n\n成功：星星碎裂消失 + 短暂奖励音", new Vector2(0, 95), new Vector2(920, 310), 30);
+            Text(nav.eyePage.transform, "EyeInstructions", "场景内同时出现多个彩色小球\n\n按提示持续观察蓝色目标约 0.8 秒，将它消去\n\n移开视线会逐渐失去进度；眼动数据丢失时暂停\n\n成功：小球闪光消失 + 短暂奖励音", new Vector2(0, 95), new Vector2(920, 310), 30);
             nav.eyeRuleLabel = null;
             Button(nav.eyePage.transform, "EyeFourButton", "4 个彩球", new Vector2(-200, -165), new Vector2(310, 82), nav.EyeFour);
             Button(nav.eyePage.transform, "EyeFiveButton", "5 个彩球", new Vector2(200, -165), new Vector2(310, 82), nav.EyeFive);
