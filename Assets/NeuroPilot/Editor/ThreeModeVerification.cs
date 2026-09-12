@@ -183,7 +183,7 @@ namespace NeuroPilotXR.Editor
         private static string Fire(string id, int seq) => "{\"type\":\"command_fire\",\"ts\":1,\"seq\":" + seq + ",\"payload\":{\"target_id\":\"" + id + "\"}}";
         private static Ray To(PracticeTarget target) => new Ray(Camera.main.transform.position, (target.transform.position - Camera.main.transform.position).normalized);
         private static void Click(string name) { var obj = GameObject.Find(name); Require(obj != null, "Missing button " + name); var b = obj.GetComponent<Button>(); Require(b.IsInteractable(), "Blocked " + name); b.onClick.Invoke(); }
-        private static void Capture(string name) => TrainingRoomVerification.Capture(name + "_v2.0.1.png");
+        private static void Capture(string name) => TrainingRoomVerification.Capture(name + "_v2.1.png");
         private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     }
 }
