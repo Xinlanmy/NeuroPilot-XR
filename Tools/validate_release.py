@@ -12,9 +12,11 @@ def require(condition: bool, message: str) -> None:
     print("PASS:", message)
 
 project = read("ProjectSettings/ProjectSettings.asset")
-require("bundleVersion: 2.1" in project, "bundle version is 2.1")
-require("productName: NeuroPilot XR 2.1" in project, "product name is NeuroPilot XR 2.1")
-require("AndroidBundleVersionCode: 9" in project, "Android versionCode is 9")
+require(re.search(r"^  bundleVersion: 2\.1\.1$", project, re.M) is not None, "bundle version is 2.1.1")
+require(re.search(r"^  productName: NeuroPilot XR 2\.1\.1$", project, re.M) is not None,
+        "product name is NeuroPilot XR 2.1.1")
+require(re.search(r"^  AndroidBundleVersionCode: 10$", project, re.M) is not None,
+        "Android versionCode is 10")
 require(re.search(r"scriptingBackend:\s+Android: 1", project) is not None, "Android uses IL2CPP")
 require("AndroidTargetArchitectures: 2" in project, "Android is ARM64-only")
 
@@ -44,6 +46,10 @@ require("private void LateUpdate()" in drag and "TryCalculateFacingRotation" in 
 gaze = read("Assets/NeuroPilot/Scripts/EyeGazeProvider.cs")
 require("TryOpenXrEyeGaze" in gaze and "TryViveEyeTracker" in gaze and "ConvertVivePose" in gaze,
         "eye tracking uses OpenXR with a converted VIVE fallback")
+eye_scene = read("Assets/NeuroPilot/TrainingRoom/Scenes/EyeTrackingRoom.unity")
+require(all(value in eye_scene for value in ("dwellSeconds: 0.8", "eyeTargetDiameter: 0.24",
+                                             "eyeHitDiameter: 0.36")),
+        "eye scene uses 0.8-second fixation and a smaller visible target")
 
 fusion = read("Assets/NeuroPilot/Training/FusionEegBridge.cs")
 telemetry = read("Assets/NeuroPilot/Training/VrTelemetryPanel.cs")
