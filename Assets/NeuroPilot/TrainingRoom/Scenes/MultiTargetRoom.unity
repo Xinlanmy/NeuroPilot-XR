@@ -2167,12 +2167,11 @@ MonoBehaviour:
   gaze: {fileID: 1000722220}
   director: {fileID: 1000722219}
   view: {fileID: 1877975509}
-  dwellSeconds: 0.3
+  dwellSeconds: 0.1
   leaveHysteresisSeconds: 0.5
   rampSeconds: 0.4
   maxSimultaneous: 3
-  neighborRadiusMeters: 2.4
-  maxViewAngleDeg: 50
+  gazeRegionRadiusMeters: 1.2
   gazeLossFallbackSeconds: 3
   rearmSeconds: 6
 --- !u!1 &1008331132

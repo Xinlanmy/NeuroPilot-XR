@@ -9,7 +9,8 @@ namespace NeuroPilotXR.Navigation
     /// <summary>
     /// L2 门控子集闪烁（2026-09-12 立项，openspec design.md 决策 10）：眼动决定"谁闪"，SSVEP 决定"打谁"。
     ///
-    /// 规则：注视任一球 dwell 0.3s → 以它为锚点取最近 ≤3 个可用球同闪（锚点必在内）；
+    /// 规则：注视任一球 dwell 0.1s → 以"视线射线"为中心、半径 gazeRegionRadiusMeters 内的可用球全部同闪
+    /// （区域内有几颗闪几颗；超过 maxSimultaneous 才裁到离视线最近的几颗；锚点必在内）；
     /// 频率从池内贪心 max-min 取号（同闪两两不同频）、episode 内冻结；视线离开 0.5s 迟滞后才停闪
     /// （迟滞期内不还频率，回来不产生事件抖动）；在闪超时未命中则原地再武装（换新 id，同频）；
     /// 眼动连续失效超时 → 自动降级为齐闪，恢复后自动切回。
@@ -27,12 +28,11 @@ namespace NeuroPilotXR.Navigation
         public Transform view;
 
         [Header("门控参数（权威值；TOML [ssvep.gate] 是镜像）")]
-        public float dwellSeconds = 0.30f;
+        public float dwellSeconds = 0.10f;
         public float leaveHysteresisSeconds = 0.50f;
         public float rampSeconds = 0.40f;
         public int maxSimultaneous = 3;
-        public float neighborRadiusMeters = 2.4f;
-        public float maxViewAngleDeg = 50f;
+        public float gazeRegionRadiusMeters = 1.2f;  // 球心到视线射线的垂直距离 ≤ 此值即进入在闪区域
         public float gazeLossFallbackSeconds = 3f;   // 0 = 关闭自动降级
         public float rearmSeconds = 6f;              // 0 = 关闭超时再武装；必须 < 闭环 --deadline（8s）
 
@@ -44,6 +44,7 @@ namespace NeuroPilotXR.Navigation
 
         private const float FallbackExitSeconds = 0.2f;
         private float clock, fixTime, lostTime, validTime;
+        private Ray gazeRay;   // 最近一次有效视线：区域选点与抢占度量都以它为中心
         private readonly List<PracticeTarget> desired = new List<PracticeTarget>();
         private readonly Dictionary<PracticeTarget, float> leaveAt = new Dictionary<PracticeTarget, float>();
         private readonly Dictionary<PracticeTarget, float> armedAt = new Dictionary<PracticeTarget, float>();
@@ -97,35 +98,44 @@ namespace NeuroPilotXR.Navigation
             PracticeTarget hit = valid ? session.ResolveGazeTarget(ray) : null;
             if (hit != Anchor) { Anchor = hit; fixTime = 0f; }
             if (Anchor != null) fixTime += delta;
+            if (valid) gazeRay = ray;
             desired.Clear();
-            if (Anchor != null && fixTime >= dwellSeconds) SelectSubset(Anchor);
+            if (Anchor != null && fixTime >= dwellSeconds) SelectSubset(Anchor, gazeRay);
             Apply();
             RearmDue();
             Status = Anchor == null
-                ? "注视任意小球 " + dwellSeconds.ToString("0.0") + " 秒，它附近的球开始闪烁"
+                ? "注视任意小球 " + dwellSeconds.ToString("0.0") + " 秒，视线附近的球开始闪烁"
                 : "门控中：在闪 " + ActiveCount + " / " + Mathf.Max(1, maxSimultaneous);
         }
 
-        /// <summary>锚点必在内，其余取半径内最近者，按距锚点升序（锚点优先拿号）。</summary>
-        private void SelectSubset(PracticeTarget anchor)
+        /// <summary>
+        /// 成员制：球心到视线射线的垂直距离 ≤ gazeRegionRadiusMeters（射线后方不算）即入选，
+        /// 锚点必在内；超出 maxSimultaneous 才裁到离视线最近的几颗。
+        /// </summary>
+        private void SelectSubset(PracticeTarget anchor, Ray ray)
         {
             desired.Add(anchor);
             scratch.Clear();
             int limit = Mathf.Max(1, maxSimultaneous);
             if (limit == 1) return;
-            Transform reference = View;
             foreach (var target in session.Targets)
             {
                 if (target == null || target == anchor || !target.Available) continue;
-                Vector3 delta = target.transform.position - anchor.transform.position;
-                if (delta.magnitude > neighborRadiusMeters) continue;
-                if (reference != null && maxViewAngleDeg < 180f &&
-                    Vector3.Angle(reference.forward, target.transform.position - reference.position) > maxViewAngleDeg) continue;
+                float distance = DistanceToRay(ray, target.transform.position);
+                if (distance < 0f || distance > gazeRegionRadiusMeters) continue;   // 负值 = 在射线后方
                 scratch.Add(target);
             }
-            scratch.Sort((a, b) => (a.transform.position - anchor.transform.position).sqrMagnitude
-                .CompareTo((b.transform.position - anchor.transform.position).sqrMagnitude));
+            scratch.Sort((a, b) => DistanceToRay(ray, a.transform.position)
+                .CompareTo(DistanceToRay(ray, b.transform.position)));
             for (int i = 0; i < scratch.Count && desired.Count < limit; i++) desired.Add(scratch[i]);
+        }
+
+        /// <summary>点到射线距离；投影 t<0（目标在视线后方）返回 -1。</summary>
+        private static float DistanceToRay(Ray ray, Vector3 point)
+        {
+            Vector3 offset = point - ray.origin;
+            if (Vector3.Dot(offset, ray.direction) <= 0f) return -1f;
+            return Vector3.Cross(ray.direction, offset).magnitude;
         }
 
         /// <summary>把 desired 落到实际闪烁：离场排期（迟滞）、入场取号、池满则抢占。</summary>
@@ -152,8 +162,8 @@ namespace NeuroPilotXR.Navigation
                 if (target == null || target.Stimulating || !target.Available) continue;
                 if (!Pool.TryAssign(director.TakenFrequencies(), out float hz))
                 {
-                    // 池被占满：抢掉离锚点最远的在闪球腾出频率（任务书规则：最近 ≤3 个同闪）
-                    PracticeTarget evict = Farthest(Anchor);
+                    // 池被占满：抢掉离视线最远的在闪球腾出频率（成员制：视线区域内优先）
+                    PracticeTarget evict = Farthest();
                     if (evict == null || !director.Stop(evict, rampSeconds)) continue;
                     leaveAt.Remove(evict); armedAt.Remove(evict);
                     if (!Pool.TryAssign(director.TakenFrequencies(), out hz)) continue;
@@ -198,16 +208,16 @@ namespace NeuroPilotXR.Navigation
             }
         }
 
-        private PracticeTarget Farthest(PracticeTarget anchor)
+        /// <summary>离视线射线最远的在闪球（不在 desired 里的）；用于池满抢占。视线无效时退回离原点最远。</summary>
+        private PracticeTarget Farthest()
         {
             PracticeTarget worst = null;
             float worstDistance = -1f;
             foreach (var target in session.Targets)
             {
                 if (target == null || !target.Stimulating || desired.Contains(target)) continue;
-                float distance = anchor != null
-                    ? Vector3.Distance(target.transform.position, anchor.transform.position)
-                    : 0f;
+                float distance = DistanceToRay(gazeRay, target.transform.position);
+                if (distance < 0f) distance = 0f;   // 射线后方的在闪球视为"最近"，优先留到最后
                 if (distance <= worstDistance) continue;
                 worst = target; worstDistance = distance;
             }
@@ -243,6 +253,7 @@ namespace NeuroPilotXR.Navigation
             desired.Clear(); leaveAt.Clear(); armedAt.Clear();
             Anchor = null; FallbackActive = policy == GatePolicy.AlwaysOn;
             clock = fixTime = lostTime = validTime = 0f;
+            gazeRay = default;
         }
     }
 }

@@ -37,7 +37,7 @@ namespace NeuroPilotXR.Navigation
         public float eyeTargetDiameter = 0.24f;
         public float eyeHitDiameter = 0.36f;
         public float eyeTargetDepth = 3.6f;
-        // 多球房（L2）：6 球初始两行三列，命中后在限定区域内随机复现、不与其它球重叠
+        // 多球房（L2）：初始与复现都在限定区域内随机布点、不与其它球重叠（区域参数见下）
         public int multiTargetCount = 6;
         public float multiSpawnHalfWidth = 1.9f;
         public Vector2 multiSpawnYRange = new Vector2(-0.4f, 1.0f); // 相对入场原点的高低偏移
@@ -79,7 +79,7 @@ namespace NeuroPilotXR.Navigation
         private readonly Color cyan = new Color(0.04f, 0.8f, 0.95f);
         private readonly Color[] palette = { new Color(.08f, .38f, 1f), new Color(1f, .12f, .23f),
             new Color(.1f, .9f, .38f), new Color(1f, .73f, .08f), new Color(.68f, .25f, 1f) };
-        // L2 多球初始布局：两行三列（相邻角距 21°/15°，满足"同屏任两目标 ≥10–15°"的生成约束）
+        // L2 多球兜底槽位（两行三列）：仅当区域随机采样彻底失败时按需取用
         private static readonly Vector2[] MultiSlots =
         {
             new Vector2(-1.6f, .85f), new Vector2(0f, .85f), new Vector2(1.6f, .85f),
@@ -183,7 +183,7 @@ namespace NeuroPilotXR.Navigation
                 target.Surface.sharedMaterial = targetMaterial;
                 if (!UsesGaze) target.Stimulus = ball.AddComponent<FrequencyStimulus>();
                 targets.Add(target);
-                Place(target, true);
+                Place(target);
             }
             if (director != null) director.SetTargets(targets);
             // 未挂门控的老多球场景：退回 2.1 的"全量齐闪"，避免房间整场不闪
@@ -298,8 +298,8 @@ namespace NeuroPilotXR.Navigation
             target.GetComponent<Collider>().enabled = false;
         }
 
-        /// <summary>摆放/复现：initial = 回合开始的固定两行三列；否则区域内随机且不与其它球重叠。</summary>
-        private void Place(PracticeTarget target, bool initial = false)
+        /// <summary>摆放/复现：多球模式初始与复现都在限定区域内随机（不与其它球重叠）；其余模式沿用各自槽位。</summary>
+        private void Place(PracticeTarget target)
         {
             if (ColorGaze && target.ColorIndex == 0 && target.FeedbackUntil > 0 && targets.Count > 1)
             {
@@ -315,7 +315,8 @@ namespace NeuroPilotXR.Navigation
             int slot = target.Slot - 1;
             if (!UsesGaze)
             {
-                if (!initial && TryPickMultiSpot(target, out best)) found = true;
+                // 初始与复现同规则：区域内随机 + 严格不重叠；只有采样彻底失败才退回固定槽位
+                if (TryPickMultiSpot(target, out best)) found = true;
                 else
                 {
                     Vector2 home = MultiSlots[Mathf.Clamp(slot, 0, MultiSlots.Length - 1)];
@@ -347,35 +348,69 @@ namespace NeuroPilotXR.Navigation
         }
 
         /// <summary>
-        /// 门控多球复现：限定区域内随机取点，与其它球留出 multiMinSpacing 的不重叠间距；
-        /// 随机采样不达标时退到固定槽位里第一个达标者，最后才用"间距最大的随机点"兜底。
+        /// 多球布点（初始与复现共用）：在 x∈±multiSpawnHalfWidth、y∈multiSpawnYRange∩[0.7,2.8]、z=+multiSpawnDepth
+        /// 的区域内采样，与其它球保持 multiMinSpacing。64 次拒绝采样 → 最大间距点（须过硬下限 0.41m，
+        /// 即球半径 0.16 + 0.25 安全余量，绝不重叠）→ 固定槽位扫描 → 最大间距点兜底并告警。
+        /// y 带先算交集再采样，构造上不可能落到区域外（不再采样后 Clamp）。
         /// </summary>
         private bool TryPickMultiSpot(PracticeTarget target, out Vector3 best)
         {
             best = default;
-            Vector3 fallback = default;
-            float bestGap = -1f;
-            for (int i = 0; i < 40; i++)
+            float yMin = Mathf.Max(multiSpawnYRange.x, 0.7f - entry.TrainingOrigin.y);
+            float yMax = Mathf.Min(multiSpawnYRange.y, 2.8f - entry.TrainingOrigin.y);
+            if (yMin > yMax) { yMin = yMax = Mathf.Clamp(multiSpawnDepth * 0f + (yMin + yMax) * .5f, -1f, 2f); }
+            const float hardFloor = 0.41f;   // 球半径 0.16 + 0.25 余量：低于它等于重叠
+            Vector3 fallback = default, blockedFallback = default;
+            float bestGap = -1f, blockedGap = -1f;
+            for (int i = 0; i < 64; i++)
             {
                 Vector3 candidate = entry.TrainingOrigin + new Vector3(
                     UnityEngine.Random.Range(-multiSpawnHalfWidth, multiSpawnHalfWidth),
-                    UnityEngine.Random.Range(multiSpawnYRange.x, multiSpawnYRange.y),
+                    UnityEngine.Random.Range(yMin, yMax),
                     multiSpawnDepth);
-                candidate.y = Mathf.Clamp(candidate.y, 0.7f, 2.8f);
                 float gap = MinGapToOthers(candidate, target);
+                // 会被 HUD 页脚挡住的点排到最后：只有实在没有别的落点时才接受
+                if (BlockedByFooter(candidate))
+                {
+                    if (gap > blockedGap) { blockedGap = gap; blockedFallback = candidate; }
+                    continue;
+                }
                 if (gap >= multiMinSpacing) { best = candidate; return true; }
                 if (gap > bestGap) { bestGap = gap; fallback = candidate; }
             }
+            if (bestGap >= hardFloor) { best = fallback; return true; }
+            // 固定槽位兜底：历史两行三列点位互相拉开，通常至少一个能过线
             for (int i = 0; i < MultiSlots.Length; i++)
             {
                 Vector2 home = MultiSlots[(Mathf.Clamp(target.Slot - 1, 0, MultiSlots.Length - 1) + i) % MultiSlots.Length];
                 Vector3 candidate = entry.TrainingOrigin + new Vector3(home.x, home.y, multiSpawnDepth);
                 candidate.y = Mathf.Clamp(candidate.y, 0.7f, 2.8f);
-                if (MinGapToOthers(candidate, target) >= multiMinSpacing) { best = candidate; return true; }
+                if (BlockedByFooter(candidate)) continue;
+                if (MinGapToOthers(candidate, target) >= hardFloor) { best = candidate; return true; }
+            }
+            if (blockedGap > 0f)
+            {
+                // 页脚很高时可能出现"区域内每个落点都被挡住"：宁可压着页脚出靶，也不能让房间没靶
+                Debug.LogWarning("多球布点：区域内所有候选都在 HUD 页脚之后，已接受最低遮挡的落点（间距 " + blockedGap.ToString("0.00") + "m）");
+                best = blockedFallback;
+                return true;
             }
             if (bestGap <= 0f) return false;
+            Debug.LogWarning("多球布点：区域过挤，已接受最小间距 " + bestGap.ToString("0.00") + "m 的候选（<0.9m）");
             best = fallback;
             return true;
+        }
+
+        /// <summary>候选点是否会被 HUD 页脚挡住（页脚或相机缺失时视为通过，避免影响无 HUD 的场景）。</summary>
+        private bool BlockedByFooter(Vector3 candidate)
+        {
+            var camera = Camera.main;
+            if (view == null || view.footerRoot == null || camera == null) return false;
+            var corners = new Vector3[4];
+            view.footerRoot.GetComponent<RectTransform>().GetWorldCorners(corners);
+            float footerTop = camera.WorldToScreenPoint(corners[1]).y;
+            float ballY = camera.WorldToScreenPoint(candidate - camera.transform.up * .16f).y;
+            return ballY <= footerTop + 4f;
         }
 
         private float MinGapToOthers(Vector3 candidate, PracticeTarget self)
