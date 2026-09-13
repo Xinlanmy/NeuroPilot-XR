@@ -854,7 +854,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text:
+  m_Text: 
 --- !u!222 &292637396
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1485,8 +1485,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6f4c2a91d7e34b58a0c9e12f83b7d604, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &498304929
 GameObject:
   m_ObjectHideFlags: 0
@@ -2166,7 +2166,7 @@ MonoBehaviour:
   session: {fileID: 1000722216}
   gaze: {fileID: 1000722220}
   director: {fileID: 1000722219}
-  view: {fileID: 0}
+  view: {fileID: 1877975509}
   dwellSeconds: 0.3
   leaveHysteresisSeconds: 0.5
   rampSeconds: 0.4
@@ -3395,6 +3395,11 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+--- !u!4 &1877975509 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9014170783809206335, guid: 895f6f3c2d334633b5800312285058d2, type: 3}
+  m_PrefabInstance: {fileID: 1877975504}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1896157312
 GameObject:
   m_ObjectHideFlags: 0
@@ -3795,7 +3800,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text:
+  m_Text: 
 --- !u!222 &2069668464
 CanvasRenderer:
   m_ObjectHideFlags: 0
