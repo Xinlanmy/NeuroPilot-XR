@@ -1,7 +1,6 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
 using Unity.XR.CoreUtils;
@@ -81,43 +80,30 @@ namespace NeuroPilotXR.Editor
             var marker = GameObject.Find("Floor Center Mark");
             if (marker != null) marker.SetActive(false);
 
-            // The room is a sealed box: if the enclosure casts, the ceiling shadow-maps the whole interior
-            // to black. Only the practice balls (runtime primitives, casting by default) drop a shadow,
-            // which is what gives the mid-air targets their depth cue.
-            foreach (string shell in new[] { "Ceiling", "Front Wall", "Back Wall", "Left Wall", "Right Wall", "Floor" })
-                SetShellShadowFlags(shell);
+            // Real-time shadows stay OFF. 2.3.0 turned them on and all three training rooms dropped to a
+            // slideshow on the Focus Vision (HTC's own metric: ~4 fps with missed presentation deadlines)
+            // while the unlit navigation scene stayed smooth and 2.2.1 was fine. The depth cue is not worth
+            // the frame budget, so the light and the shell are restored to the pre-2.3.0 state.
             var key = GameObject.Find("Key Light");
             var keyLight = key != null ? key.GetComponent<Light>() : null;
             if (keyLight != null)
             {
-                keyLight.shadows = LightShadows.Soft;
+                keyLight.shadows = LightShadows.None;
                 EditorUtility.SetDirty(keyLight);
             }
-            ConfigureShadowBudget();
+            foreach (string shell in new[] { "Ceiling", "Front Wall", "Back Wall", "Left Wall", "Right Wall", "Floor" })
+                SetShellShadowFlags(shell);
         }
 
+        /// <summary>Shell renderers keep their default casting flags; with shadows off only the light matters.</summary>
         private static void SetShellShadowFlags(string name)
         {
             var obj = GameObject.Find(name);
             var shellRenderer = obj != null ? obj.GetComponent<Renderer>() : null;
             if (shellRenderer == null) return;
-            shellRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            shellRenderer.shadowCastingMode = ShadowCastingMode.On;
             shellRenderer.receiveShadows = true;
             EditorUtility.SetDirty(shellRenderer);
-        }
-
-        /// <summary>The room is 12 m deep; the 50 m default budget spends shadow-map texels on nothing.</summary>
-        private static void ConfigureShadowBudget()
-        {
-            var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
-            if (pipeline == null) return;
-            pipeline.shadowDistance = 20f;
-            // supportsSoftShadows is read-only; URP only exposes the backing field through SerializedObject.
-            var serialized = new SerializedObject(pipeline);
-            var soft = serialized.FindProperty("m_SoftShadowsSupported");
-            if (soft != null) soft.boolValue = true;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(pipeline);
         }
 
         private static void Tint(string name, Color color)
