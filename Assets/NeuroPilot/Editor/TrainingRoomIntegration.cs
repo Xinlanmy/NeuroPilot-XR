@@ -22,8 +22,8 @@ namespace NeuroPilotXR.Editor
         public const string NavigationPath = "Assets/NeuroPilot/Scenes/NeuroPilotNavigation.unity";
         private const string Root = "Assets/NeuroPilot/TrainingRoom";
         private const string RigPath = "Assets/Samples/XR Interaction Toolkit/2.5.4/Starter Assets/Prefabs/XR Interaction Setup.prefab";
-        public const string Version = "2.2.1";
-        private const int VersionCode = 12;
+        public const string Version = "2.3.0";
+        private const int VersionCode = 13;
         private const string ApkPath = "Builds/Android/NeuroPilotXR_" + Version + ".apk";
 
         [MenuItem("NeuroPilot/Training Room/Integrate Imported Scene")]

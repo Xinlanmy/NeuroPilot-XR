@@ -12,11 +12,11 @@ def require(condition: bool, message: str) -> None:
     print("PASS:", message)
 
 project = read("ProjectSettings/ProjectSettings.asset")
-require(re.search(r"^  bundleVersion: 2\.2\.1$", project, re.M) is not None, "bundle version is 2.2.1")
-require(re.search(r"^  productName: NeuroPilot XR 2\.2\.1$", project, re.M) is not None,
-        "product name is NeuroPilot XR 2.2.1")
-require(re.search(r"^  AndroidBundleVersionCode: 12$", project, re.M) is not None,
-        "Android versionCode is 12")
+require(re.search(r"^  bundleVersion: 2\.3\.0$", project, re.M) is not None, "bundle version is 2.3.0")
+require(re.search(r"^  productName: NeuroPilot XR 2\.3\.0$", project, re.M) is not None,
+        "product name is NeuroPilot XR 2.3.0")
+require(re.search(r"^  AndroidBundleVersionCode: 13$", project, re.M) is not None,
+        "Android versionCode is 13")
 require(re.search(r"scriptingBackend:\s+Android: 1", project) is not None, "Android uses IL2CPP")
 require("AndroidTargetArchitectures: 2" in project, "Android is ARM64-only")
 
@@ -77,8 +77,21 @@ require(all(value in eye_scene for value in ("dwellSeconds: 0.8", "eyeTargetDiam
 fusion = read("Assets/NeuroPilot/Training/FusionEegBridge.cs")
 telemetry = read("Assets/NeuroPilot/Training/VrTelemetryPanel.cs")
 require(all(event in fusion for event in ("attention_update", "fatigue_update", "cognitive_profile")) and
-        "ShowSessionResult" in telemetry,
+        "ResultSummary" in telemetry,
         "attention, fatigue and cognitive profile telemetry are connected")
+# 2.3.0 起训练中不再显示实时遥测（悬浮读数挡在靶区里），数值只进居中结算卡。
+require("TextMesh" not in telemetry and "Canvas" not in telemetry and
+        "ResultSummary" in read("Assets/NeuroPilot/TrainingRoom/Scripts/Core/SessionManager.cs"),
+        "live in-VR telemetry stays retired; the summary only surfaces in the result card")
+
+# 房间按钮曾引用 ButtonGradient 里已被重建掉的子资产 fileID，渲染成纯白块（白字不可见）。
+# 贴图必须来自真实子资产：房间按钮的 sprite 引用不得再出现那个悬空 fileID。
+for scene in ("TrainingRoom", "EyeTrackingRoom", "MultiTargetRoom"):
+    room = read(f"Assets/NeuroPilot/TrainingRoom/Scenes/{scene}.unity")
+    require("7952024925285346104" not in room,
+            f"{scene} has no dangling ButtonGradient sprite reference")
+    require("guid: eebf8f221d9d5fc4e8a65291355c5797" in room,
+            f"{scene} buttons reference the shared ButtonGradient sprite asset")
 
 openxr = read("Assets/XR/Settings/OpenXR Package Settings.asset")
 for name in ("VIVEFocus3Profile Android", "VIVEFocus3Feature Android", "ViveEyeTracker Android"):

@@ -1,5 +1,7 @@
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
 using Unity.XR.CoreUtils;
@@ -9,9 +11,12 @@ namespace NeuroPilotXR.Editor
     // Native world-space uGUI; no screen-space overlays attached to the user's head.
     public static class TrainingRoomPresentation
     {
-        private static readonly Color Ink = new Color(0.045f, 0.075f, 0.11f, 0.96f);
+        // Cards mirror the navigation panel: rounded navy surface with a cyan edge, so the HUD stops
+        // reading as flat rectangles pasted on the wall.
+        private static readonly Color Glass = new Color(0.06f, 0.13f, 0.26f, 0.94f);
         private static readonly Color Muted = new Color(0.64f, 0.75f, 0.82f);
         private static readonly Color Accent = new Color(0.25f, 0.84f, 0.93f);
+        private static readonly Color Edge = new Color(0.08f, 0.6f, 1f, 0.85f);
         private static Font font;
         private static Sprite rounded;
 
@@ -30,7 +35,7 @@ namespace NeuroPilotXR.Editor
             hud.timeText = Stat("TimeCard", stats, hud.timeText, "剩余时间", 0);
             hud.accuracyText = Stat("AccuracyCard", stats, hud.accuracyText, "命中率", 370);
 
-            var footer = Panel("TrainingFooter", canvas, new Vector2(0, -375), new Vector2(1160, 132), Ink);
+            var footer = Card("TrainingFooter", canvas, new Vector2(0, -375), new Vector2(1160, 132), Glass);
             hud.footerRoot = footer.gameObject;
             hud.hintText = Reuse(hud.hintText, "HintText", footer, new Vector2(0, 24), new Vector2(1100, 48), 30, Color.white);
             // The hint carries a second, diagnostic line whenever eye data is missing. The box is one
@@ -39,7 +44,7 @@ namespace NeuroPilotXR.Editor
             hud.hintText.verticalOverflow = VerticalWrapMode.Overflow;
             hud.modeText = Reuse(hud.modeText, "ModeText", footer, new Vector2(0, -29), new Vector2(1100, 40), 24, Muted);
 
-            var countdown = Panel("ReadyCard", canvas, Vector2.zero, new Vector2(260, 240), Ink);
+            var countdown = Card("ReadyCard", canvas, Vector2.zero, new Vector2(260, 240), Glass);
             hud.countdownRoot = countdown.gameObject;
             Label("ReadyLabel", countdown, "准备开始", new Vector2(0, 72), new Vector2(230, 48), 30, Muted);
             hud.countdownText = Label("ReadyValue", countdown, "3", new Vector2(0, -20), new Vector2(230, 132), 104, Accent);
@@ -48,7 +53,8 @@ namespace NeuroPilotXR.Editor
             result.anchoredPosition = Vector2.zero;
             result.sizeDelta = new Vector2(980, 720);
             var resultImage = result.GetComponent<Image>();
-            resultImage.sprite = rounded; resultImage.type = Image.Type.Sliced; resultImage.color = Ink;
+            resultImage.sprite = rounded; resultImage.type = Image.Type.Sliced; resultImage.color = Glass;
+            AddEdge(result.gameObject);
             hud.resultText = Reuse(hud.resultText, "ResultText", result, Vector2.zero, new Vector2(890, 650), 36, Color.white);
             hud.resultText.supportRichText = true;
             result.SetAsLastSibling();
@@ -74,6 +80,44 @@ namespace NeuroPilotXR.Editor
             Tint("Floor", new Color(0.48f, 0.53f, 0.57f));
             var marker = GameObject.Find("Floor Center Mark");
             if (marker != null) marker.SetActive(false);
+
+            // The room is a sealed box: if the enclosure casts, the ceiling shadow-maps the whole interior
+            // to black. Only the practice balls (runtime primitives, casting by default) drop a shadow,
+            // which is what gives the mid-air targets their depth cue.
+            foreach (string shell in new[] { "Ceiling", "Front Wall", "Back Wall", "Left Wall", "Right Wall", "Floor" })
+                SetShellShadowFlags(shell);
+            var key = GameObject.Find("Key Light");
+            var keyLight = key != null ? key.GetComponent<Light>() : null;
+            if (keyLight != null)
+            {
+                keyLight.shadows = LightShadows.Soft;
+                EditorUtility.SetDirty(keyLight);
+            }
+            ConfigureShadowBudget();
+        }
+
+        private static void SetShellShadowFlags(string name)
+        {
+            var obj = GameObject.Find(name);
+            var shellRenderer = obj != null ? obj.GetComponent<Renderer>() : null;
+            if (shellRenderer == null) return;
+            shellRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            shellRenderer.receiveShadows = true;
+            EditorUtility.SetDirty(shellRenderer);
+        }
+
+        /// <summary>The room is 12 m deep; the 50 m default budget spends shadow-map texels on nothing.</summary>
+        private static void ConfigureShadowBudget()
+        {
+            var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            if (pipeline == null) return;
+            pipeline.shadowDistance = 20f;
+            // supportsSoftShadows is read-only; URP only exposes the backing field through SerializedObject.
+            var serialized = new SerializedObject(pipeline);
+            var soft = serialized.FindProperty("m_SoftShadowsSupported");
+            if (soft != null) soft.boolValue = true;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(pipeline);
         }
 
         private static void Tint(string name, Color color)
@@ -96,7 +140,7 @@ namespace NeuroPilotXR.Editor
 
         private static Text Stat(string name, Transform parent, Text value, string title, float x)
         {
-            var panel = Panel(name, parent, new Vector2(x, 380), new Vector2(350, 138), Ink);
+            var panel = Card(name, parent, new Vector2(x, 380), new Vector2(350, 138), Glass);
             var caption = Label("Caption", panel, title, new Vector2(0, 39), new Vector2(290, 40), 28, Muted);
             caption.alignment = TextAnchor.MiddleLeft;
             var output = Reuse(value, "Value", panel, new Vector2(0, -23), new Vector2(290, 75), 58, Color.white);
@@ -124,6 +168,20 @@ namespace NeuroPilotXR.Editor
             var image = rect.GetComponent<Image>() ?? rect.gameObject.AddComponent<Image>();
             image.sprite = rounded; image.type = Image.Type.Sliced; image.color = color; image.raycastTarget = false;
             return rect;
+        }
+
+        private static RectTransform Card(string name, Transform parent, Vector2 position, Vector2 size, Color color)
+        {
+            var rect = Panel(name, parent, position, size, color);
+            AddEdge(rect.gameObject);
+            return rect;
+        }
+
+        private static void AddEdge(GameObject target)
+        {
+            var outline = target.GetComponent<Outline>() ?? target.AddComponent<Outline>();
+            outline.effectColor = Edge;
+            outline.effectDistance = new Vector2(2f, -2f);
         }
 
         private static Text Label(string name, Transform parent, string content, Vector2 position, Vector2 size, int pixels, Color color)

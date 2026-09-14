@@ -131,7 +131,7 @@ namespace NeuroPilotXR.Navigation
         {
             ClearTargets();
             var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
-            if (telemetry != null) telemetry.HideProfile();
+            if (telemetry != null) telemetry.ResetRound();
             Hits = Misses = 0; dwell = graceLeft = validEyeTime = onTargetTime = 0f;
             Remaining = duration; finished = false; Running = false;
             if (restartButton != null) restartButton.interactable = false;
@@ -470,14 +470,13 @@ namespace NeuroPilotXR.Navigation
         {
             Running = false; finished = true; ClearTargets(); RefreshStats();
             var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
-            if (telemetry != null) telemetry.ShowSessionResult(Hits, Misses,
-                Hits + Misses > 0 ? 100f * Hits / (Hits + Misses) : 0f, float.NaN);
             if (restartButton != null) restartButton.interactable = true;
             view.resultPanel.SetActive(true); view.countdownRoot.SetActive(false);
             view.statsRoot.SetActive(false); view.footerRoot.SetActive(false);
             view.resultText.text = "训练完成\n\n<size=60>" + (mode == TrainingMode.EyeTracking ? "视线追踪" : "多球定位") + "</size>\n\n确认目标  " + Hits +
                 (UsesGaze ? "\n有效眼动中的注视占比  " + view.accuracyText.text : "\n脑电确认次数，不代表分类准确率") +
-                "\n\n可重新训练，或返回模式选择";
+                "\n\n可重新训练，或返回模式选择" +
+                (telemetry != null ? telemetry.ResultSummary() : string.Empty);
         }
 
         public void Restart() { if (started && finished) ResetRound(); }
