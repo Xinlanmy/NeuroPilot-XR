@@ -42,14 +42,22 @@ Key Light 的 `m_Shadows.m_Type` 是 `0`（三间房都是），小球因此悬�
 
 ## 验证状态
 
-已在无编辑器条件下完成：
+已在 Unity 2022.3.62f1 batchmode 下实测通过：
 
-- `python Tools/validate_release.py` 全绿（含新增的两条检查：训练中不得再有实时遥测渲染；三个房间不得再出现悬空的 ButtonGradient 引用、必须引用真实贴图资产）。
+- `python Tools/validate_release.py` 31/31 全绿（含新增两条：训练中不得再有实时遥测渲染；三个房间不得再出现悬空的 ButtonGradient 引用、必须引用真实贴图资产）。
+- Unity 编译 0 错误。
+- `TrainingRoomIntegration.Prepare` 重存三个房间与导航场景，改动全部落到场景 YAML：三个房间一致为 6 个外壳 Renderer 不投影、1 盏主光软阴影、6 张玻璃卡、按钮贴图指向真实子资产。
+- EditMode 发布契约测试 11/11 通过（含改写后的遥测用例）。
+- Play mode `TrainingRoomVerification` 全绿，预览图重出为 `Previews/TrainingRoom{,_Ready,_Result}_v2.3.0.png`。
+- Play mode `ThreeModeVerification`（L2 门控全部断言）全绿。
 
-仍需在 Unity 编辑器与头显上完成：
+顺带修掉两个**验证器自身**的缺陷（与本轮视觉改动无关，两者都在未改动的 `origin/main` 上复现）：
 
-1. 跑 `NeuroPilot/Training Room/Integrate Imported Scene` 重存三个房间场景与导航场景。
-2. EditMode 发布契约测试（含改写后的遥测用例）。
-3. Play mode `TrainingRoomVerification` 与三模式验证，重新生成 `Assets/NeuroPilot/Previews/*_v2.3.0.png`。
-4. 出包并在头显上确认四件事：阴影落地且房间没有变黑、按钮是蓝底白字可读、训练中视野干净无浮字、结算卡里有平均注意力/低注意持续。
-5. 若磨砂球观感不如原版，回退只是一个 `_Smoothness` 常量加一个 keyword。
+- `TrainingRoomVerification` 第 109 行要求 `modeText` 含"挑战"、第 110 行又要求它为空且隐藏，两条断言互斥 —— 自 2.2 移除场景内难度标签后该脚本不可能通过。
+- `ThreeModeVerification` 的门控探针在 `Physics.SyncTransforms()` 之前发射线，打不到本帧刚布好的球，锚点恒为 `null`、误报"一颗都没闪"（显示为 `expected N, got 0`）。补一次物理同步后全绿；**门控自身逻辑一个字未改**。
+
+仍需头显确认：
+
+1. 出包 `Builds/Android/NeuroPilotXR_2.3.0.apk` 并 `adb install -r`。
+2. 四件事：阴影落地且房间没有变黑、按钮是蓝底白字可读、训练中视野干净无浮字、结算卡里有平均注意力/低注意持续。
+3. 若磨砂球观感不如原版，回退只是一个 `_Smoothness` 常量加一个 keyword。
