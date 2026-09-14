@@ -216,6 +216,18 @@ namespace NeuroPilotXR.Editor
             gate.StepGaze(false, default, .6f);
             Require(gate.FallbackActive && multi.director.ActiveCount == 3 &&
                 multi.Targets.Where(t => t.Stimulating).Select(t => t.Frequency).Distinct().Count() == 3, "Gaze loss did not degrade to always-on flicker");
+            var fallbackTargets = multi.Targets.Where(t => t.Stimulating).ToList();
+            var fallbackIds = fallbackTargets.Select(t => t.Id).ToArray();
+            var fallbackFrequencies = fallbackTargets.Select(t => t.Frequency).ToArray();
+            onsetBefore = events.Count(e => e.Contains("stimulus_onset"));
+            offsetBefore = events.Count(e => e.Contains("stimulus_offset"));
+            gate.StepGaze(false, default, gate.rearmSeconds + .1f);
+            Require(fallbackTargets.All(t => t.Stimulating) &&
+                fallbackTargets.Select(t => t.Frequency).SequenceEqual(fallbackFrequencies) &&
+                fallbackTargets.All(t => !fallbackIds.Contains(t.Id)) &&
+                events.Count(e => e.Contains("stimulus_onset")) == onsetBefore + fallbackTargets.Count &&
+                events.Count(e => e.Contains("stimulus_offset")) == offsetBefore + fallbackTargets.Count,
+                "Fallback flicker did not re-arm expired episodes");
             gate.StepGaze(true, To(first), .25f);
             Require(!gate.FallbackActive, "Gaze recovery did not return to gating");
             multi.TestFinish(); yield return .1f; Capture("MultiResult"); Click("RestartPracticeButton");

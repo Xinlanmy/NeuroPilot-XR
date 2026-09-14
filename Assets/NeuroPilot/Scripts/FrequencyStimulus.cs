@@ -16,6 +16,7 @@ namespace NeuroPilotXR.Navigation
         private bool running;
         private float rampSeconds;
         private double stopAt;
+        private float fadeFrom = 1f;
         public float Intensity = 1f;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
@@ -25,7 +26,7 @@ namespace NeuroPilotXR.Navigation
         {
             surface = GetComponent<Renderer>(); block = block ?? new MaterialPropertyBlock();
             Frequency = hz; duty = dutyCycle; onset = Time.realtimeSinceStartupAsDouble;
-            rampSeconds = Mathf.Max(0f, ramp); stopAt = 0.0; running = true;
+            rampSeconds = Mathf.Max(0f, ramp); stopAt = 0.0; fadeFrom = 1f; running = true;
             Paint(true, Envelope());
         }
 
@@ -35,7 +36,13 @@ namespace NeuroPilotXR.Navigation
         public void Stop(float fade)
         {
             if (!running) return;
-            if (fade > 0f) { stopAt = Time.realtimeSinceStartupAsDouble; rampSeconds = fade; return; }
+            if (fade > 0f)
+            {
+                fadeFrom = EnvelopeLevel();
+                stopAt = Time.realtimeSinceStartupAsDouble;
+                rampSeconds = fade;
+                return;
+            }
             running = false;
             if (surface != null) surface.SetPropertyBlock(null);
         }
@@ -57,15 +64,20 @@ namespace NeuroPilotXR.Navigation
         /// <summary>渐入（onset 起）/ 渐出（stopAt 起）的幅度包络，× Intensity 保持既有语义。</summary>
         private float Envelope()
         {
+            return EnvelopeLevel() * Intensity;
+        }
+
+        private float EnvelopeLevel()
+        {
             float amp = 1f;
             if (rampSeconds > 0f)
             {
                 double now = Time.realtimeSinceStartupAsDouble;
                 amp = stopAt > 0.0
-                    ? Mathf.Clamp01(1f - (float)((now - stopAt) / rampSeconds))
+                    ? fadeFrom * Mathf.Clamp01(1f - (float)((now - stopAt) / rampSeconds))
                     : Mathf.Clamp01((float)((now - onset) / rampSeconds));
             }
-            return amp * Intensity;
+            return amp;
         }
 
         private void Paint(bool on, float amp)

@@ -90,6 +90,7 @@ namespace NeuroPilotXR.Navigation
             if (FallbackActive)
             {
                 StepAlwaysOn();
+                RearmDue();
                 Status = policy == GatePolicy.AlwaysOn ? "齐闪模式（场景定死）"
                     : "眼动不可用 · 已切换备用齐闪";
                 return;
