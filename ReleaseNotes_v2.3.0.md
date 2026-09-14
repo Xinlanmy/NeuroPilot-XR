@@ -18,11 +18,20 @@
 
 **根因**：导航页每次都整体销毁重建，按钮拿到的都是当前 fileID；房间按钮却被 `if (Find(...) == null)` 守卫成"只在首次创建一次"，贴图资产被项目生成器重建过之后就永久悬空。本版把房间按钮的贴图改成每轮重新解析，并让 `ThreeModeSetup.PresentRoom` 对**三个房间**都跑一遍统一呈现，消除"拷贝只在复制那一刻继承一次"的结构性漂移。`RestartPracticeButton` 的禁用态颜色也改成可读（原来是 0.784/α0.5，字糊在底上）。
 
-### 2. 训练房没有任何实时阴影
+### 2. 训练房的实时阴影：试过，已回退（性能取舍，不是回归）
 
-Key Light 的 `m_Shadows.m_Type` 是 `0`（三间房都是），小球因此悬空，而多球定位本来就在考深度判断。
+Key Light 的 `m_Shadows.m_Type` 是 `0`（三间房都是），小球因此悬空、少一层深度线索。本版一度打开主光软阴影，并把阴影预算从 50 米收到 20 米、天花板与四壁设为只接收不投影（房间是闭合盒子，整壳投影会让天花板把内部压黑 —— 这正是当初关掉阴影的原因）。
 
-本版打开主光软阴影，并把阴影预算从 50 米收到 20 米（房间只有 12 米深）。**关键配套**：天花板与四壁的 `shadowCastingMode` 设为 `Off`、只保留接收阴影 —— 房间是闭合盒子，整壳投影会让天花板把整个内部压黑，这正是当初把阴影关掉的原因。地板不投影，只有练习球投射。
+**真机实测不可接受，已回退**：
+
+| 观测 | 读数 | 来源 |
+| --- | --- | --- |
+| 开阴影：三个训练房 | `FPS=4.0/0.0`，`GpuBd=1`（GPU 受限），运行时反复打 `RENDER_ATWC` 错过显示截止时间 | HTC `VRMetricXR` |
+| 同机对照：未改的导航场景 | `FPS=98~108/120`，`GpuBd=0` | 同上 |
+| 主观 | 转头呈"幻灯片"，一顿一顿 | 头显实测 |
+| 2.2.1 同房间 | 顺滑，无此现象 | 头显实测 |
+
+结论：**保持阴影关闭**。`TrainingRoomPresentation.Prepare` 现在显式把 Key Light 置 `LightShadows.None`、并把外壳投射标记恢复成默认，防止以后再漂移回开启状态。小球没有落地投影是这个取舍的代价 —— 如果以后要拿回深度线索，可行的方向是硬阴影 + 512 阴影贴图，并且必须先测 `VRMetricXR` 的 `FPS/GpuBd` 再决定，不要凭观感开。
 
 ### 3. 训练中挂着头锁遥测浮字
 
@@ -46,7 +55,7 @@ Key Light 的 `m_Shadows.m_Type` 是 `0`（三间房都是），小球因此悬�
 
 - `python Tools/validate_release.py` 31/31 全绿（含新增两条：训练中不得再有实时遥测渲染；三个房间不得再出现悬空的 ButtonGradient 引用、必须引用真实贴图资产）。
 - Unity 编译 0 错误。
-- `TrainingRoomIntegration.Prepare` 重存三个房间与导航场景，改动全部落到场景 YAML：三个房间一致为 6 个外壳 Renderer 不投影、1 盏主光软阴影、6 张玻璃卡、按钮贴图指向真实子资产。
+- `TrainingRoomIntegration.Prepare` 重存三个房间与导航场景，改动落到场景 YAML：三个房间一致为 6 张玻璃卡、按钮贴图指向真实子资产、Key Light `m_Shadows.m_Type: 0`（阴影保持关闭）。
 - EditMode 发布契约测试 11/11 通过（含改写后的遥测用例）。
 - Play mode `TrainingRoomVerification` 全绿，预览图重出为 `Previews/TrainingRoom{,_Ready,_Result}_v2.3.0.png`。
 - Play mode `ThreeModeVerification`（L2 门控全部断言）全绿。
