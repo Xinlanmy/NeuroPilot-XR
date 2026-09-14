@@ -2078,6 +2078,7 @@ MonoBehaviour:
   reward: {fileID: 1000722218}
   restartButton: {fileID: 237722130}
   director: {fileID: 0}
+  gate: {fileID: 0}
   duration: 180
   dwellSeconds: 0.8
   dwellGraceSeconds: 0.3
@@ -2085,6 +2086,11 @@ MonoBehaviour:
   eyeTargetDiameter: 0.24
   eyeHitDiameter: 0.36
   eyeTargetDepth: 3.6
+  multiTargetCount: 6
+  multiSpawnHalfWidth: 1.9
+  multiSpawnYRange: {x: -0.4, y: 1}
+  multiSpawnDepth: 4.1
+  multiMinSpacing: 0.9
   acceptExternalConfirm: 0
 --- !u!114 &1000722217
 MonoBehaviour:
@@ -2579,7 +2585,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text:
+  m_Text: 
 --- !u!222 &1375923454
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3736,7 +3742,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text:
+  m_Text: 
 --- !u!222 &2069668464
 CanvasRenderer:
   m_ObjectHideFlags: 0

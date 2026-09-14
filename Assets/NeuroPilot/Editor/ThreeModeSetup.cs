@@ -137,11 +137,11 @@ namespace NeuroPilotXR.Editor
             Button(nav.eyePage.transform, "BackFromEyeButton", "返回模式选择", new Vector2(-355, -355), new Vector2(290, 80), nav.ShowModes);
             nav.eyeStart = Button(nav.eyePage.transform, "StartEyeButton", "进入视线训练", new Vector2(220, -355), new Vector2(440, 92), nav.StartEye);
 
-            nav.multiPage = Page(panel, "MultiPage", "多球定位", "SSVEP 频率编码 · 脑电确认 · 每轮 3 分钟");
+            nav.multiPage = Page(panel, "MultiPage", "多球定位", "眼动门控起闪 · SSVEP 频率编码 · 脑电确认");
             Panel(nav.multiPage.transform, "Instructions", new Vector2(0, 80), new Vector2(1000, 280));
-            Text(nav.multiPage.transform, "MultiInstructions", "三个小球同时以不同频率闪烁\n\n脑电识别出哪个目标，就消去哪一个\n\n无需眼动触发；手柄仅用于导航操作", new Vector2(0, 80), new Vector2(920, 250), 29);
-            Text(nav.multiPage.transform, "FrequencyNote", "目标 1 / 2 / 3：" + string.Join(" / ", frequencyPool.frequencies.Select(f => f.ToString("0.#"))) + " Hz\n来自仓库候选配置 · 正式频率仍需脑电联调验证", new Vector2(0, -165), new Vector2(1080, 110), 27);
-            Text(nav.multiPage.transform, "EegNote", "已预留脑电消息接口；当前尚未连接算法服务", new Vector2(0, -260), new Vector2(1080, 55), 25);
+            Text(nav.multiPage.transform, "MultiInstructions", "同屏 6 颗小球：注视哪颗，它附近的 ≤3 颗才开始闪烁\n\n脑电识别出哪个目标，就消去哪一个（判定即命中）\n\n眼动只负责门控起闪、不参与判定；眼动失效自动转为齐闪", new Vector2(0, 80), new Vector2(920, 250), 29);
+            Text(nav.multiPage.transform, "FrequencyNote", "频率池 " + string.Join(" / ", frequencyPool.frequencies.Select(f => f.ToString("0.#"))) + " Hz · 同闪两两不同频\n池内贪心 max-min 取号，频率随每次起闪事件下发（非槽位绑定）", new Vector2(0, -165), new Vector2(1080, 110), 27);
+            Text(nav.multiPage.transform, "EegNote", "脑电闭环实时判别，无需手柄扣扳机；命中反馈与球数上限见房间内提示", new Vector2(0, -260), new Vector2(1080, 55), 25);
             nav.countLabel = null;
             nav.multiRuleLabel = null;
             nav.frequencyConfig = frequencyPool;
@@ -260,6 +260,15 @@ namespace NeuroPilotXR.Editor
                 practice.director = practice.GetComponent<SsvepTargetGroup>() ?? practice.gameObject.AddComponent<SsvepTargetGroup>();
                 practice.director.config = frequencyPool;
                 practice.acceptExternalConfirm = true;
+                // L2 起多球房也要眼动：不是"用眼动得分"，而是门控决定谁闪（判定仍只认脑电）
+                if (practice.gaze == null) practice.gaze = practice.gameObject.AddComponent<EyeGazeProvider>();
+                practice.gaze.origin = UnityEngine.Object.FindObjectOfType<XROrigin>();
+                practice.gate = practice.GetComponent<GazeSubsetGate>() ?? practice.gameObject.AddComponent<GazeSubsetGate>();
+                practice.gate.policy = GatePolicy.GazeGated;
+                practice.gate.session = practice;
+                practice.gate.gaze = practice.gaze;
+                practice.gate.director = practice.director;
+                practice.gate.view = Camera.main != null ? Camera.main.transform : null;
             }
             if (mode == TrainingMode.EyeTracking && practice.gaze == null)
             {
@@ -268,11 +277,9 @@ namespace NeuroPilotXR.Editor
             }
             if (mode == TrainingMode.EyeTracking && practice.GetComponent<NeuroPilotXR.Training.FusionEegBridge>() != null)
                 UnityEngine.Object.DestroyImmediate(practice.GetComponent<NeuroPilotXR.Training.FusionEegBridge>());
-            if (mode == TrainingMode.MultiTarget && practice.gaze != null)
-            {
-                UnityEngine.Object.DestroyImmediate(practice.gaze);
-                practice.gaze = null;
-            }
+            if (mode == TrainingMode.EyeTracking && practice.GetComponent<GazeSubsetGate>() != null)
+                UnityEngine.Object.DestroyImmediate(practice.GetComponent<GazeSubsetGate>());
+            if (mode == TrainingMode.EyeTracking && practice.gate != null) practice.gate = null;
             practice.restartButton = practice.view.transform.Find("RestartPracticeButton").GetComponent<Button>();
             practice.restartButton.interactable = false;
             foreach (var root in scene.GetRootGameObjects())
