@@ -106,7 +106,9 @@ namespace NeuroPilotXR.Editor
             Require(UnityEngine.Object.FindObjectsOfType<XROrigin>().Length == 1, "Multiple active rigs");
             Require(UnityEngine.Object.FindObjectOfType<SceneTransitionManager>() == null, "Transition overlay not cleaned up");
             Require(UnityEngine.Object.FindObjectOfType<VivePassthroughManager>() == null, "Navigation passthrough persisted");
-            Require(TrainingSession.SelectedDifficulty == DifficultyLevel.Advanced && session.hud.modeText.text.Contains("挑战"), "Difficulty not retained");
+            // Only the retained selection is checkable: the in-scene difficulty label was deliberately removed
+            // in 2.2, and the next check asserts it is gone — requiring "挑战" here contradicted that.
+            Require(TrainingSession.SelectedDifficulty == DifficultyLevel.Advanced, "Difficulty not retained");
             Require(!session.hud.modeText.gameObject.activeSelf && string.IsNullOrEmpty(session.hud.modeText.text), "Training scene auxiliary label remains visible");
             Require(Mathf.Approximately(session.config.roundDuration, 180f) && Mathf.Approximately(session.config.flickerHz, 12f), "Source configuration altered");
             VerifySpawnPositions(session.config);
