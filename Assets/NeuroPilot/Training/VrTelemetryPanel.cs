@@ -3,110 +3,63 @@ using UnityEngine;
 namespace NeuroPilotXR.Training
 {
     /// <summary>
-    /// Small in-VR telemetry panel driven by attention_update / fatigue_update /
-    /// cognitive_profile envelopes. It is intentionally code-created so no scene
-    /// YAML changes are required; FusionEegBridge adds it at runtime.
+    /// Accumulates attention_update / fatigue_update / cognitive_profile envelopes for the end-of-round
+    /// summary. It draws nothing on purpose: the head-locked live readout sat inside the target area and
+    /// fought the HUD, so the numbers only surface in the centred result card via <see cref="ResultSummary"/>.
+    /// It stays a component because FusionEegBridge attaches it at runtime and both round drivers read it.
     /// </summary>
     public sealed class VrTelemetryPanel : MonoBehaviour
     {
-        private GameObject root;
-        private TextMesh attentionText;
-        private TextMesh fatigueText;
-        private TextMesh profileText;
-
         private float attentionScore = 0.5f;
-        private float fatigueScore;
-        private float quality = 1f;
         private string state = "NORMAL";
         private int validSamples;
         private double attentionSum;
         private double fatigueDuration;
 
         public float AttentionScore => attentionScore;
-        public bool IsProfileVisible => profileText != null && profileText.gameObject.activeSelf;
-        public bool IsLiveTelemetryVisible => attentionText != null && attentionText.gameObject.activeSelf;
-
-        private void Awake()
-        {
-            EnsureBuilt();
-        }
-
-        private void Update()
-        {
-            Camera cam = Camera.main;
-            if (cam == null || root == null) return;
-            root.transform.position = cam.transform.position + cam.transform.rotation * new Vector3(0f, 0.12f, 1.55f);
-            root.transform.rotation = cam.transform.rotation;
-        }
 
         public void SetAttention(FusionJson payload)
         {
             if (payload == null) return;
-            EnsureBuilt();
             attentionScore = Read01(payload, "score", attentionScore);
-            quality = Read01(payload, "quality", quality);
-            double valid = payload.Num("valid", 0.0);
-            if (valid > 0.5)
+            if (payload.Num("valid", 0.0) > 0.5)
             {
                 attentionSum += attentionScore;
                 validSamples++;
             }
-            attentionText.text = string.Format("注意力  {0:0.00}   质量  {1:0.00}", attentionScore, quality);
         }
 
         public void SetFatigue(FusionJson payload)
         {
             if (payload == null) return;
-            EnsureBuilt();
-            fatigueScore = Read01(payload, "score", fatigueScore);
             state = payload.Str("state", state);
             fatigueDuration = payload.Num("low_duration_s", fatigueDuration);
-            fatigueText.text = string.Format("疲劳值  {0:0.00}   {1}", fatigueScore, state);
         }
 
-        public void ShowCognitiveProfile(FusionJson payload)
+        /// <summary>The profile repeats the round counters Unity already owns; only its fatigue total adds
+        /// anything, and it is authoritative when it arrives.</summary>
+        public void SetCognitiveProfile(FusionJson payload)
         {
             if (payload == null) return;
-            double hits = payload.Num("hits", double.NaN);
-            double misses = payload.Num("misses", double.NaN);
-            double hitRate = payload.Num("hit_rate", double.NaN);
-            double avgReaction = payload.Num("avg_reaction_s", double.NaN);
-            double attentionMean = payload.Num("attention_mean", double.NaN);
             double fatigueSeconds = payload.Num("fatigue_total_s", double.NaN);
-            ShowProfile(hits, misses, hitRate, avgReaction, attentionMean, fatigueSeconds);
+            if (!double.IsNaN(fatigueSeconds)) fatigueDuration = fatigueSeconds;
         }
 
-        public void ShowSessionResult(int hit, int miss, float rate, float avgReaction)
+        public void ResetRound()
         {
-            ShowProfile(hit, miss, rate, avgReaction, validSamples > 0 ? attentionSum / validSamples : double.NaN, fatigueDuration);
-        }
-
-        public void HideProfile()
-        {
-            EnsureBuilt();
-            profileText.gameObject.SetActive(false);
-            attentionText.gameObject.SetActive(true);
-            fatigueText.gameObject.SetActive(true);
             validSamples = 0;
             attentionSum = 0.0;
             fatigueDuration = 0.0;
         }
 
-        private void ShowProfile(double hits, double misses, double hitRate, double avgReaction,
-            double attentionMean, double fatigueSeconds)
+        /// <summary>Empty when no attention sample ever arrived, so the result card never prints a made-up score.</summary>
+        public string ResultSummary()
         {
-            EnsureBuilt();
-            attentionText.gameObject.SetActive(false);
-            fatigueText.gameObject.SetActive(false);
-            profileText.gameObject.SetActive(true);
-            profileText.text =
-                "<size=32><color=#8DA9BA>认知画像</color></size>\n\n" +
-                (double.IsNaN(hits) ? "" : $"命中  {hits:0}   漏失  {misses:0}\n") +
-                (double.IsNaN(hitRate) ? "" : $"命中率  {hitRate:0.0}%\n") +
-                (double.IsNaN(avgReaction) ? "" : $"平均反应时  {avgReaction:0.00} s\n") +
-                (double.IsNaN(attentionMean) ? "" : $"平均注意力  {attentionMean:0.00}\n") +
-                (double.IsNaN(fatigueSeconds) ? "" : $"低注意持续  {fatigueSeconds:0.0} s\n") +
-                $"结束状态  {state}";
+            if (validSamples <= 0 && fatigueDuration <= 0.0) return string.Empty;
+            string text = "\n\n<size=30><color=#8DA9BA>认知画像</color></size>\n";
+            if (validSamples > 0) text += string.Format("平均注意力  {0:0.00}\n", attentionSum / validSamples);
+            if (fatigueDuration > 0.0) text += string.Format("低注意持续  {0:0.0} s\n", fatigueDuration);
+            return text + "结束状态  " + state;
         }
 
         private static float Read01(FusionJson payload, string key, float fallback)
@@ -115,38 +68,6 @@ namespace NeuroPilotXR.Training
             return double.IsNaN(value) || double.IsInfinity(value)
                 ? fallback
                 : Mathf.Clamp01((float)value);
-        }
-
-        private void EnsureBuilt()
-        {
-            if (root == null) Build();
-        }
-
-        private void Build()
-        {
-            root = new GameObject("VrTelemetryPanel");
-            root.transform.SetParent(transform, false);
-            attentionText = CreateText("Attention", new Vector3(-0.34f, 0.20f, 0f), 20, TextAnchor.MiddleLeft);
-            fatigueText = CreateText("Fatigue", new Vector3(-0.34f, 0.10f, 0f), 20, TextAnchor.MiddleLeft);
-            profileText = CreateText("Profile", Vector3.zero, 24, TextAnchor.MiddleCenter);
-            profileText.gameObject.SetActive(false);
-            attentionText.text = "注意力  --   质量  --";
-            fatigueText.text = "疲劳值  --   NORMAL";
-        }
-
-        private TextMesh CreateText(string name, Vector3 localPosition, int fontSize, TextAnchor anchor)
-        {
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(root.transform, false);
-            go.transform.localPosition = localPosition;
-            TextMesh mesh = go.AddComponent<TextMesh>();
-            mesh.fontSize = fontSize;
-            mesh.characterSize = 0.008f;
-            mesh.anchor = anchor;
-            mesh.alignment = TextAlignment.Left;
-            mesh.color = new Color(0.72f, 0.95f, 1f, 0.95f);
-            mesh.richText = true;
-            return mesh;
         }
     }
 }

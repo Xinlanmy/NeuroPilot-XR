@@ -130,7 +130,7 @@ public class SessionManager : MonoBehaviour
                 _stateTimer = config.readyCountdown;
                 if (hud != null) hud.ResetForRound(config.roundDuration);
                 var telemetryReady = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
-                if (telemetryReady != null) telemetryReady.HideProfile();
+                if (telemetryReady != null) telemetryReady.ResetRound();
                 break;
 
             case State.Spawn:
@@ -174,12 +174,12 @@ public class SessionManager : MonoBehaviour
                 if (spawner != null) spawner.DespawnCurrent();
                 float rate = (HitCount + MissCount) > 0 ? (float)HitCount / (HitCount + MissCount) * 100f : 0f;
                 float avgRt = _reactionSamples > 0 ? _totalReaction / _reactionSamples : 0f;
+                var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
                 if (hud != null)
                 {
                     hud.ShowResult(HitCount, MissCount, rate, avgRt);
+                    if (telemetry != null) hud.resultText.text += telemetry.ResultSummary();
                 }
-                var telemetry = GetComponent<NeuroPilotXR.Training.VrTelemetryPanel>();
-                if (telemetry != null) telemetry.ShowSessionResult(HitCount, MissCount, rate, avgRt);
                 Debug.Log($"[训练场] 结束 命中={HitCount} 漏失={MissCount} " +
                           $"平均反应时={(_reactionSamples > 0 ? _totalReaction / _reactionSamples : 0f):F2}s");
                 break;
