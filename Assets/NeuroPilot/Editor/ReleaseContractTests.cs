@@ -21,9 +21,9 @@ namespace NeuroPilotXR.Editor
         {
             ViveFocusVisionConfigurator.ApplyProjectProfile();
             Assert.DoesNotThrow(ViveFocusVisionConfigurator.ValidateProject);
-            Assert.AreEqual(12, PlayerSettings.Android.bundleVersionCode);
-            Assert.AreEqual("2.2.1", PlayerSettings.bundleVersion);
-            Assert.AreEqual("NeuroPilot XR 2.2.1", PlayerSettings.productName);
+            Assert.AreEqual(13, PlayerSettings.Android.bundleVersionCode);
+            Assert.AreEqual("2.3.0", PlayerSettings.bundleVersion);
+            Assert.AreEqual("NeuroPilot XR 2.3.0", PlayerSettings.productName);
             Assert.AreEqual("com.neuropilot.xr", PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android));
         }
 
@@ -61,7 +61,7 @@ namespace NeuroPilotXR.Editor
         }
 
         [Test]
-        public void TelemetryPanelClampsInputAndSeparatesLiveAndResultViews()
+        public void TelemetryClampsInputAndOnlySurfacesAtRoundEnd()
         {
             var host = new GameObject("TelemetryTestHost");
             try
@@ -69,15 +69,32 @@ namespace NeuroPilotXR.Editor
                 var panel = host.AddComponent<VrTelemetryPanel>();
                 panel.SetAttention(FusionJson.TryParse("{\"score\":1.4,\"quality\":0.8,\"valid\":1}"));
                 Assert.AreEqual(1f, panel.AttentionScore);
-                Assert.IsTrue(panel.IsLiveTelemetryVisible);
+                // Nothing may render while the round is running: the live readout used to sit in the target area.
+                Assert.IsNull(host.GetComponentInChildren<TextMesh>(true));
+                Assert.IsNull(host.GetComponentInChildren<Canvas>(true));
 
-                panel.ShowSessionResult(3, 1, 75f, float.NaN);
-                Assert.IsTrue(panel.IsProfileVisible);
-                Assert.IsFalse(panel.IsLiveTelemetryVisible);
+                string summary = panel.ResultSummary();
+                StringAssert.Contains("平均注意力  1.00", summary);
+                StringAssert.Contains("结束状态  NORMAL", summary);
 
-                panel.HideProfile();
-                Assert.IsFalse(panel.IsProfileVisible);
-                Assert.IsTrue(panel.IsLiveTelemetryVisible);
+                panel.ResetRound();
+                Assert.AreEqual(string.Empty, panel.ResultSummary());
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void TelemetrySummaryStaysSilentWithoutAttentionSamples()
+        {
+            var host = new GameObject("TelemetryQuietHost");
+            try
+            {
+                var panel = host.AddComponent<VrTelemetryPanel>();
+                panel.SetFatigue(FusionJson.TryParse("{\"score\":0.2,\"state\":\"NORMAL\",\"low_duration_s\":0}"));
+                Assert.AreEqual(string.Empty, panel.ResultSummary());
             }
             finally
             {

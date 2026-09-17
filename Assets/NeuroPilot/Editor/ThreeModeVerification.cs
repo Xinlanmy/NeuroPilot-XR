@@ -119,10 +119,15 @@ namespace NeuroPilotXR.Editor
             // ① 随机初始布局上的成员制语义：区域内有几颗闪几颗（1~3），锚点必在内、频率互异。
             //    期望值按真实位置现算，等于把 GazeSubsetGate 的选点规则在验证器里独立复算一遍。
             var expected = ExpectedRegion(multi, anchor);
+            // 门控用 Physics.Raycast 找锚点，而本帧刚布完球、还没走到物理同步；不同步的话射线打不到
+            // 刚生成的碰撞体，Anchor 永远是 null，探针会误报"一颗都没闪"。
+            Physics.SyncTransforms();
             gate.StepGaze(true, To(anchor), .2f);
             var probed = multi.Targets.Where(t => t.Stimulating).ToList();
             Require(probed.Count == expected && probed.Count >= 1 && probed.Contains(anchor),
-                "Membership rule did not light exactly the gaze-region targets on the random layout (expected " + expected + ", got " + probed.Count + ")");
+                "Membership rule did not light exactly the gaze-region targets on the random layout (expected " + expected
+                + ", got " + probed.Count + "; running=" + multi.Running + " active=" + multi.director.ActiveCount
+                + " fallback=" + gate.FallbackActive + " status=" + gate.Status + ")");
             Require(probed.Select(t => t.Frequency).Distinct().Count() == probed.Count, "Random-layout subset reuses a frequency");
             gate.StepGaze(false, default, .2f);
             gate.StepGaze(false, default, gate.leaveHysteresisSeconds + .1f);   // 迟滞排期在离场那一步才写入，必须再走一步才到期

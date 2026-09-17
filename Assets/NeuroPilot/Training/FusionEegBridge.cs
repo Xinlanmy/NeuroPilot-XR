@@ -109,7 +109,7 @@ namespace NeuroPilotXR.Training
                     }
                     if (type == "cognitive_profile")
                     {
-                        _telemetry.ShowCognitiveProfile(payload);
+                        _telemetry.SetCognitiveProfile(payload);
                         return;
                     }
                 }
