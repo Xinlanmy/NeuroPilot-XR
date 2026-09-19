@@ -427,8 +427,8 @@ namespace NeuroPilotXR.Editor
             CreateImage(panel.transform, "TopEdgeSheen", new Vector2(1060f, 3f), new Vector2(0f, 432f), new Color(0.36f, 0.74f, 1f, 0.38f), false);
 
             CanvasGroup welcome = CreatePage(panel.transform, "WelcomePage");
-            CreateText(welcome.transform, "TitleGlow", "注意力训练中心", 118f, new Vector2(1080f, 170f), new Vector2(0f, 52f), new Color(0.06f, 0.40f, 1f, 0.22f), FontStyles.Bold);
-            TMP_Text mainTitle = CreateText(welcome.transform, "MainTitle", "注意力训练中心", 114f, new Vector2(1080f, 170f), new Vector2(0f, 58f), Color.white, FontStyles.Bold);
+            CreateText(welcome.transform, "TitleGlow", "认知训练中心", 118f, new Vector2(1080f, 170f), new Vector2(0f, 52f), new Color(0.06f, 0.40f, 1f, 0.22f), FontStyles.Bold);
+            TMP_Text mainTitle = CreateText(welcome.transform, "MainTitle", "认知训练中心", 114f, new Vector2(1080f, 170f), new Vector2(0f, 58f), Color.white, FontStyles.Bold);
             ApplyTitleGradient(mainTitle);
             CreateImage(welcome.transform, "TitleGlowLineWide", new Vector2(760f, 30f), new Vector2(0f, -45f), new Color(0.02f, 0.30f, 1f, 0.06f), false);
             CreateImage(welcome.transform, "TitleGlowLine", new Vector2(650f, 5f), new Vector2(0f, -45f), new Color(0.18f, 0.68f, 1f, 0.86f), false);
